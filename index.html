@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="국어">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f7f7f8">
+<meta name="format-detection" content="telephone=no">
+<title>국어 학습 대시보드</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="bar">
+    <div class="bar-l">
+      <div class="eyebrow">수능 국어</div>
+      <h1 id="viewTitle">독해</h1>
+    </div>
+    <div class="bar-r">
+      <span id="syncDot" class="sync-dot" hidden>·</span>
+      <span id="dday" class="dday"></span>
+      <button id="btnAdd" class="icon-btn" type="button" aria-label="추가">＋</button>
+    </div>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<nav id="tabbar" aria-label="화면 이동"></nav>
+
+<!-- 파일 추가 순서 = 탭 순서. 탭을 늘리려면 파일 1개 + script 1줄만 추가 -->
+<script src="core.js"></script>
+<script src="ui.js"></script>
+<script src="sync.js"></script>
+<script src="view-reading.js"></script>
+<script src="view-exam.js"></script>
+<script src="view-genre.js"></script>
+<script src="view-settings.js"></script>
+<script>App.start();</script>
+</body>
+</html>
