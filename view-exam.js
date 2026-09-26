@@ -82,6 +82,9 @@ var ExamView = (function () {
       '</div>';
     root.appendChild(sec);
 
+    /* 목표 대비 */
+    root.appendChild(targetSection(all, s));
+
     /* 원점수 추이 */
     var chron = all.slice().reverse().filter(function (e) { return e.raw != null; });
     var ch = h('<section><div class="sec-h"><h2>원점수 추이</h2><span class="more">전체 ' +
@@ -89,11 +92,22 @@ var ExamView = (function () {
     var box = h('<div class="card"></div>');
     box.innerHTML = lineChart(
       chron.map(function (e) { return e.raw; }),
-      chron.map(function (e) { return (e.date || '').slice(5).replace('.', '/'); }),
+      chron.map(shortDate),
       {}
     );
     ch.appendChild(box);
     root.appendChild(ch);
+
+    /* 백분위 추이 (목표선) */
+    var pc = all.slice().reverse().filter(function (e) { return e.pct != null; });
+    if (pc.length) {
+      var ph = h('<section><div class="sec-h"><h2>백분위 추이</h2><span class="more">' +
+        (s.targetPct != null ? '<span class="tg-key"></span>목표 ' + esc(s.targetPct) : '') + '</span></div></section>');
+      var pbox = h('<div class="card"></div>');
+      pbox.innerHTML = lineChart(pc.map(function (e) { return e.pct; }), pc.map(shortDate), { target: s.targetPct });
+      ph.appendChild(pbox);
+      root.appendChild(ph);
+    }
 
     /* 영역별 평균 오답 */
     var areas = [['독서', '독서'], ['문학', '문학'], ['선택', '선택']];
@@ -141,9 +155,48 @@ var ExamView = (function () {
     });
     sec3.appendChild(ul);
     root.appendChild(sec3);
+
+    var pr = h('<button type="button" class="btn full">A4 리포트 보기 · 인쇄</button>');
+    pr.onclick = function () { Report.open(); };
+    root.appendChild(pr);
   }
 
-  return { render: render, editor: editor, label: label };
+  function shortDate(e) { return (e.date || '').slice(5).replace('.', '/'); }
+
+  /* 목표 대비: 최근 백분위·등급 차이, 달성 횟수, D-day */
+  function targetSection(all, s) {
+    var st = targetStats(all, s);
+    var sec = h('<section><div class="sec-h"><h2>목표 대비</h2><span class="more">목표 ' +
+      (s.targetGrade != null ? esc(s.targetGrade) + '등급' : '') +
+      (s.targetPct != null ? ' · 백분위 ' + esc(s.targetPct) : '') + '</span></div></section>');
+    sec.appendChild(h('<div class="grid4">' +
+      gapCard('백분위 차이', st.pctGap, '') +
+      gapCard('등급 차이', st.gradeGap, '등급') +
+      statCard('목표 달성', st.hitN + '/' + st.pctN, '회') +
+      statCard('수능까지', st.dday != null && st.dday >= 0 ? 'D-' + st.dday : '–', '') +
+      '</div>'));
+    return sec;
+  }
+  function targetStats(all, s) {
+    var withPct = all.filter(function (e) { return e.pct != null; });
+    var withGrade = all.filter(function (e) { return e.grade != null; });
+    return {
+      pctGap: withPct.length && s.targetPct != null ? Math.round((withPct[0].pct - s.targetPct) * 10) / 10 : null,
+      /* 등급은 숫자가 작을수록 좋음 → 목표 − 최근 */
+      gradeGap: withGrade.length && s.targetGrade != null ? s.targetGrade - withGrade[0].grade : null,
+      hitN: s.targetPct != null ? withPct.filter(function (e) { return e.pct >= s.targetPct; }).length : 0,
+      pctN: withPct.length,
+      dday: dLeft(s.examDate)
+    };
+  }
+  function gapCard(k, v, unit) {
+    if (v == null) return statCard(k, '–', '');
+    var cls = v > 0 ? 'gap-up' : (v < 0 ? 'gap-dn' : '');
+    return '<div class="stat"><div class="k">' + esc(k) + '</div><div class="v ' + cls + '">' +
+      (v > 0 ? '+' : '') + esc(v) + (unit ? '<small>' + esc(unit) + '</small>' : '') + '</div></div>';
+  }
+
+  return { render: render, editor: editor, label: label, targetStats: targetStats, gapCard: gapCard, shortDate: shortDate };
 })();
 
 App.register({

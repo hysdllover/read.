@@ -173,37 +173,52 @@ function emptyBox(title, sub) {
   return '<div class="empty"><b>' + esc(title) + '</b>' + esc(sub || '') + '</div>';
 }
 
-/* 꺾은선 차트 (SVG) */
+/* 꺾은선 차트 (SVG) — 모든 점에 점수·날짜 표시.
+   간격이 좁으면 날짜를 비스듬히, 그래도 모자라면 가로 스크롤 */
 function lineChart(vals, labels, opt) {
   opt = opt || {};
   if (!vals.length) return '<div class="empty-mini">기록이 쌓이면 추이가 표시됩니다</div>';
-  var W = 320, H = 118, L = 20, R = 8, T = 10, B = 18;
+  var n = vals.length, L = 22, R = 22, T = 16, W = 320, MIN = 18;
+  var gap = n > 1 ? (W - L - R) / (n - 1) : W;
+  if (gap < MIN) { gap = MIN; W = L + R + (n - 1) * MIN; }
+  var tilt = gap < 30;
+  var B = tilt ? 34 : 20, H = tilt ? 144 : 130;
   var lo = opt.min != null ? opt.min : Math.min.apply(null, vals);
   var hi = opt.max != null ? opt.max : Math.max.apply(null, vals);
   if (opt.target != null) { lo = Math.min(lo, opt.target); hi = Math.max(hi, opt.target); }
   var span = (hi - lo) || 1;
-  lo -= span * 0.12; hi += span * 0.12; span = hi - lo;
+  lo -= span * 0.14; hi += span * 0.14; span = hi - lo;
   var inv = !!opt.invert;
-  function X(i) { return vals.length === 1 ? (L + (W - L - R) / 2) : L + i * (W - L - R) / (vals.length - 1); }
+  function X(i) { return n === 1 ? W / 2 : L + i * gap; }
   function Y(v) { var r = (v - lo) / span; return T + (inv ? r : 1 - r) * (H - T - B); }
-  var s = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '">';
-  s += '<line class="gd" x1="' + L + '" y1="' + (H - B) + '" x2="' + W + '" y2="' + (H - B) + '"/>';
+  var s = '<div class="chart-scroll"><svg class="chart" viewBox="0 0 ' + W + ' ' + H + '"' +
+    (W > 320 ? ' style="min-width:' + W + 'px"' : '') + '>';
+  s += '<line class="gd" x1="0" y1="' + (H - B) + '" x2="' + W + '" y2="' + (H - B) + '"/>';
   if (opt.target != null) {
-    s += '<line class="tg" x1="' + L + '" y1="' + Y(opt.target).toFixed(1) + '" x2="' + W + '" y2="' + Y(opt.target).toFixed(1) + '"/>';
+    s += '<line class="tg" x1="0" y1="' + Y(opt.target).toFixed(1) + '" x2="' + W + '" y2="' + Y(opt.target).toFixed(1) + '"/>';
   }
   var pts = vals.map(function (v, i) { return X(i).toFixed(1) + ',' + Y(v).toFixed(1); }).join(' ');
-  if (vals.length > 1) s += '<polyline class="ln" points="' + pts + '"/>';
-  var step = Math.ceil(vals.length / 7);       // 기록이 많아지면 글자만 솎아냄 (점과 선은 전부 표시)
-  var r = vals.length > 12 ? 1.8 : 2.4;
+  if (n > 1) s += '<polyline class="ln" points="' + pts + '"/>';
   vals.forEach(function (v, i) {
-    var show = (i % step === 0) || i === vals.length - 1;
-    s += '<circle class="pt" cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + r + '"/>';
-    if (show) {
-      s += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 6).toFixed(1) + '" text-anchor="middle">' + esc(v) + '</text>';
-      if (labels && labels[i]) {
-        s += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(labels[i]) + '</text>';
+    var x = X(i), y = Y(v);
+    var hit = opt.target != null && (inv ? v <= opt.target : v >= opt.target);
+    /* 골짜기 점은 점수를 아래에 달아 선과 겹치지 않게 */
+    var prev = i > 0 ? Y(vals[i - 1]) : null, next = i < n - 1 ? Y(vals[i + 1]) : null;
+    var below = (prev != null || next != null) && (prev == null || y > prev) && (next == null || y > next) && y < H - B - 14;
+    s += '<circle class="pt' + (hit ? ' hit' : '') + '" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2.4"/>';
+    s += '<text class="vl" x="' + x.toFixed(1) + '" y="' + (below ? y + 12 : y - 6).toFixed(1) + '" text-anchor="middle">' + esc(v) + '</text>';
+    if (labels && labels[i]) {
+      if (tilt) {
+        var ly = H - B + 10;
+        s += '<text x="' + (x + 3).toFixed(1) + '" y="' + ly + '" text-anchor="end" transform="rotate(-40 ' + (x + 3).toFixed(1) + ' ' + ly + ')">' + esc(labels[i]) + '</text>';
+      } else {
+        s += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(labels[i]) + '</text>';
       }
     }
   });
-  return s + '</svg>';
+  return s + '</svg></div>';
+}
+/* 가로 스크롤 차트는 최신(오른쪽 끝)이 보이게 */
+function scrollCharts(root) {
+  (root || document).querySelectorAll('.chart-scroll').forEach(function (el) { el.scrollLeft = el.scrollWidth; });
 }

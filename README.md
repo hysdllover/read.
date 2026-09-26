@@ -6,8 +6,9 @@
 ## 올리는 법 (GitHub Pages)
 
 1. 새 저장소 생성 (예: `korean-dash`, Public)
-2. 아래 8개 파일을 **폴더 없이 그대로** 업로드
-   `index.html` `style.css` `core.js` `ui.js` `sync.js` `view-reading.js` `view-exam.js` `view-genre.js` `view-settings.js`
+2. 아래 파일을 **폴더 없이 그대로** 업로드
+   `index.html` `style.css` `core.js` `ui.js` `sync.js` `view-reading.js` `view-exam.js` `view-genre.js` `view-settings.js` `view-report.js`
+   `sw.js` `manifest.json` `icon-180.png` `icon-192.png` `icon-512.png`
    (`build-preview.js`, `preview.html`은 확인용이라 올리지 않아도 됩니다)
 3. Settings → Pages → Source: `Deploy from a branch` → `main` / `/(root)` → Save
 4. 1~2분 뒤 `https://아이디.github.io/korean-dash/` 접속
@@ -35,7 +36,12 @@
 - 모든 입력은 저장 즉시 브라우저(localStorage)에 기록됨
 - 하루 1회 자동 저장본 생성, 최근 7일 보관 → 설정 탭에서 날짜 탭하면 복원
 - 설정 → **백업 파일 내려받기** 로 JSON 저장, 다른 기기에서 **불러오기**
-- 기기 간 자동 동기화는 없음 (아이폰↔아이패드는 백업 파일로 이동)
+
+## 홈 화면 앱 · 오프라인
+
+- 홈 화면 아이콘(`icon-*.png`)과 `manifest.json`으로 앱처럼 열림
+- `sw.js`가 파일을 저장해 두어 **인터넷 없이도 열림**. 새 파일은 뒤에서 받아 다음 실행 때 반영
+- 파일을 고쳐 올릴 때는 `sw.js`의 `CACHE = 'kor-v1'` 숫자를 올려 주세요 (예: `kor-v2`)
 
 ## 기능을 고치거나 추가할 때
 
@@ -59,4 +65,8 @@
 | `exams` | 시행일, 출제(평가원/교육청/사설/기타), 시험명, 선택과목, 원점수·표준점수·백분위·등급, 독서/문학/선택 오답 수, 소요 시간, 총평 |
 | `passages` | 영역(독서·문학), 제재(인문/철학/사회/경제/과학/기술 · 고전산문/현대산문/고전시가/현대시), 지문명, 출처, 문항수·오답수, 체감 난이도, 오답 원인, 풀이 방식, 오답 정리 |
 
-인쇄(A4)는 Safari 공유 → 프린트에서 현재 화면 그대로 출력됩니다.
+## 인쇄 (A4)
+
+- 설정 → 인쇄 → **A4 리포트 보기**(또는 모의고사 탭 맨 아래) → 인쇄
+- 요약 · 목표 대비 · 원점수/백분위 추이 · 모의고사 표 · 제재별 표 · 오답 원인이 A4에 맞춰 출력됩니다
+- 인쇄 버튼이 안 먹으면 Safari 공유 → 프린트

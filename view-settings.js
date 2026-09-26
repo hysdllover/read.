@@ -162,6 +162,13 @@ var SettingsView = (function () {
     g2.appendChild(grid);
     root.appendChild(g2);
 
+    /* 인쇄 */
+    var g5 = h('<section><div class="sec-h"><h2>인쇄</h2><span class="more">A4</span></div></section>');
+    var rp = h('<button type="button" class="btn full">A4 리포트 보기 · 인쇄</button>');
+    rp.onclick = function () { Report.open(); };
+    g5.appendChild(rp);
+    root.appendChild(g5);
+
     /* 백업 */
     var g3 = h('<section><div class="sec-h"><h2>백업</h2><span class="more">자동 저장됨</span></div></section>');
     var c3 = h('<div class="card"></div>');

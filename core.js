@@ -242,6 +242,7 @@ var App = {
     add.hidden = !cur.add;
     add.onclick = cur.add || null;
     cur.render(main);
+    if (window.scrollCharts) scrollCharts(main);
     document.querySelectorAll('#tabbar button').forEach(function (b) {
       b.classList.toggle('on', b.dataset.id === cur.id);
     });
@@ -292,5 +293,9 @@ var App = {
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden && CODE !== null && window.Sync) Sync.run(false);
     });
+    /* 오프라인 실행 (지원 안 하는 환경은 그냥 넘어감) */
+    try {
+      if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(function () { });
+    } catch (e) { }
   }
 };
