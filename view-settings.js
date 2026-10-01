@@ -164,8 +164,8 @@ var SettingsView = (function () {
 
     /* 인쇄 */
     var g5 = h('<section><div class="sec-h"><h2>인쇄</h2><span class="more">A4</span></div></section>');
-    var rp = h('<button type="button" class="btn full">A4 리포트 보기 · 인쇄</button>');
-    rp.onclick = function () { Report.open(); };
+    var rp = h('<button type="button" class="btn full">A4 리포트 (그래프 · 전체)</button>');
+    rp.onclick = function () { Report.open('full'); };
     g5.appendChild(rp);
     root.appendChild(g5);
 

@@ -312,3 +312,21 @@ section{margin-bottom:18px;}
   .rp-s .sec-h{break-after:avoid;page-break-after:avoid;}
   .rp-t thead{display:table-header-group;}
 }
+
+/* 리포트 모드 · 큰 그래프 */
+.rp-seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;}
+.rp-seg button{font-size:11px;padding:4px 12px !important;color:var(--t2) !important;font-weight:400 !important;}
+.rp-seg button.on{background:var(--t1);color:#fff !important;}
+.chart.lg text{font-size:10px;}
+.chart.lg .vl{font-weight:500;}
+.chart.lg .ln{stroke-width:1.5;}
+.chart.lg .pt{stroke-width:1.4;}
+.rp-c{padding:10px 8px 4px;}
+@media (max-width:600px){.chart.lg{min-width:520px;}}
+.rp-row th{text-align:left;color:var(--t3);font-weight:400;padding-right:8px;}
+.rp-row td{text-align:center;}
+@media print{
+  .rp-graph .rp-s{margin-bottom:8mm;}
+  .rp-graph .rp-c{padding:3mm 2mm 1mm;}
+  .rp-row{font-size:8pt !important;}
+}

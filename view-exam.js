@@ -156,8 +156,8 @@ var ExamView = (function () {
     sec3.appendChild(ul);
     root.appendChild(sec3);
 
-    var pr = h('<button type="button" class="btn full">A4 리포트 보기 · 인쇄</button>');
-    pr.onclick = function () { Report.open(); };
+    var pr = h('<button type="button" class="btn full">그래프 인쇄 (A4)</button>');
+    pr.onclick = function () { Report.open('graph'); };
     root.appendChild(pr);
   }
 

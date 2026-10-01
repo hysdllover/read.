@@ -178,11 +178,13 @@ function emptyBox(title, sub) {
 function lineChart(vals, labels, opt) {
   opt = opt || {};
   if (!vals.length) return '<div class="empty-mini">기록이 쌓이면 추이가 표시됩니다</div>';
-  var n = vals.length, L = 22, R = 22, T = 16, W = 320, MIN = 18;
+  /* size 'lg' = A4 전폭 인쇄용 (글자·점 크게) */
+  var lg = opt.size === 'lg', k = lg ? 1.3 : 1;
+  var n = vals.length, L = 22 * k, R = 22 * k, T = 16 * k, W0 = lg ? 640 : 320, W = W0, MIN = 18 * k;
   var gap = n > 1 ? (W - L - R) / (n - 1) : W;
   if (gap < MIN) { gap = MIN; W = L + R + (n - 1) * MIN; }
-  var tilt = gap < 30;
-  var B = tilt ? 34 : 20, H = tilt ? 144 : 130;
+  var tilt = gap < 30 * k;
+  var B = (tilt ? 34 : 20) * k, H = lg ? (tilt ? 250 : 230) : (tilt ? 144 : 130);
   var lo = opt.min != null ? opt.min : Math.min.apply(null, vals);
   var hi = opt.max != null ? opt.max : Math.max.apply(null, vals);
   if (opt.target != null) { lo = Math.min(lo, opt.target); hi = Math.max(hi, opt.target); }
@@ -191,8 +193,8 @@ function lineChart(vals, labels, opt) {
   var inv = !!opt.invert;
   function X(i) { return n === 1 ? W / 2 : L + i * gap; }
   function Y(v) { var r = (v - lo) / span; return T + (inv ? r : 1 - r) * (H - T - B); }
-  var s = '<div class="chart-scroll"><svg class="chart" viewBox="0 0 ' + W + ' ' + H + '"' +
-    (W > 320 ? ' style="min-width:' + W + 'px"' : '') + '>';
+  var s = '<div class="chart-scroll"><svg class="chart' + (lg ? ' lg' : '') + '" viewBox="0 0 ' + W + ' ' + H + '"' +
+    (W > W0 ? ' style="min-width:' + (lg ? W / 2 : W) + 'px"' : '') + '>';
   s += '<line class="gd" x1="0" y1="' + (H - B) + '" x2="' + W + '" y2="' + (H - B) + '"/>';
   if (opt.target != null) {
     s += '<line class="tg" x1="0" y1="' + Y(opt.target).toFixed(1) + '" x2="' + W + '" y2="' + Y(opt.target).toFixed(1) + '"/>';
@@ -204,15 +206,15 @@ function lineChart(vals, labels, opt) {
     var hit = opt.target != null && (inv ? v <= opt.target : v >= opt.target);
     /* 골짜기 점은 점수를 아래에 달아 선과 겹치지 않게 */
     var prev = i > 0 ? Y(vals[i - 1]) : null, next = i < n - 1 ? Y(vals[i + 1]) : null;
-    var below = (prev != null || next != null) && (prev == null || y > prev) && (next == null || y > next) && y < H - B - 14;
-    s += '<circle class="pt' + (hit ? ' hit' : '') + '" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2.4"/>';
-    s += '<text class="vl" x="' + x.toFixed(1) + '" y="' + (below ? y + 12 : y - 6).toFixed(1) + '" text-anchor="middle">' + esc(v) + '</text>';
+    var below = (prev != null || next != null) && (prev == null || y > prev) && (next == null || y > next) && y < H - B - 14 * k;
+    s += '<circle class="pt' + (hit ? ' hit' : '') + '" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (2.4 * k) + '"/>';
+    s += '<text class="vl" x="' + x.toFixed(1) + '" y="' + (below ? y + 12 * k : y - 6 * k).toFixed(1) + '" text-anchor="middle">' + esc(v) + '</text>';
     if (labels && labels[i]) {
       if (tilt) {
-        var ly = H - B + 10;
-        s += '<text x="' + (x + 3).toFixed(1) + '" y="' + ly + '" text-anchor="end" transform="rotate(-40 ' + (x + 3).toFixed(1) + ' ' + ly + ')">' + esc(labels[i]) + '</text>';
+        var ly = H - B + 10 * k;
+        s += '<text x="' + (x + 3 * k).toFixed(1) + '" y="' + ly + '" text-anchor="end" transform="rotate(-40 ' + (x + 3 * k).toFixed(1) + ' ' + ly + ')">' + esc(labels[i]) + '</text>';
       } else {
-        s += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(labels[i]) + '</text>';
+        s += '<text x="' + x.toFixed(1) + '" y="' + (H - 6 * k) + '" text-anchor="middle">' + esc(labels[i]) + '</text>';
       }
     }
   });
