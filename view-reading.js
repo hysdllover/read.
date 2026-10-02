@@ -9,7 +9,7 @@ var ReadingView = (function () {
     var f = form(
       fSeg('구분', 'cat', READ_CATS, it.cat) +
       fText('제목', 'title', it.title, '예: 독서 지문 3단계 처리법') +
-      fArea('내용', 'body', it.body, '읽는 순서, 표시 규칙, 선지 판단 기준 등') +
+      fArea('내용', 'body', it.body, '읽는 순서, 표시 규칙, 선지 판단 기준 등', true) +
       fSeg('상단 고정', 'pin', ['고정', '보통'], it.pin ? '고정' : '보통')
     );
     bindForm(f);
@@ -67,14 +67,16 @@ var ReadingView = (function () {
     }
     if (!list.length) { root.appendChild(h(emptyBox('이 구분에는 기록이 없습니다', ''))); return; }
 
+    var grid = h('<div class="notes"></div>');
+    root.appendChild(grid);
     list.forEach(function (it) {
-      var c = h('<div class="card card-tap" style="margin-bottom:8px">' +
+      var c = h('<div class="card card-tap">' +
         '<div class="row-b"><div class="item-t">' + (it.pin ? '· ' : '') + esc(it.title) + '</div>' +
         '<span class="badge">' + esc(it.cat) + '</span></div>' +
         (it.body ? '<div class="item-body clamp3">' + esc(it.body) + '</div>' : '') +
         '</div>');
       c.onclick = function () { editor(it); };
-      root.appendChild(c);
+      grid.appendChild(c);
     });
   }
 
@@ -82,7 +84,7 @@ var ReadingView = (function () {
 })();
 
 App.register({
-  id: 'reading', label: '독해', title: '독해', icon: '☰',
+  id: 'reading', label: '노트', title: '독해 노트', icon: '☰',
   render: ReadingView.render,
   add: function () { ReadingView.editor(null); }
 });

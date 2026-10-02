@@ -1,13 +1,14 @@
 # 국어 학습 대시보드
 
-수능 국어 전용. 독해 · 모의고사 기록 · 제재별 기록 3개 탭 + 설정.
+수능 국어 전용. 홈 · 모의고사 · 제재별 · 노트 4개 탭 + 설정(우상단 톱니).
+아이패드 가로에서는 2단 화면, 글자 크기는 설정 → 화면에서 기기별로 조절.
 아이폰/아이패드 Safari에 맞춰 제작, 입력 즉시 자동 저장.
 
 ## 올리는 법 (GitHub Pages)
 
 1. 새 저장소 생성 (예: `korean-dash`, Public)
 2. 아래 파일을 **폴더 없이 그대로** 업로드
-   `index.html` `style.css` `core.js` `ui.js` `sync.js` `view-reading.js` `view-exam.js` `view-genre.js` `view-settings.js` `view-report.js`
+   `index.html` `style.css` `core.js` `ui.js` `sync.js` `view-home.js` `view-reading.js` `view-exam.js` `view-genre.js` `view-settings.js` `view-report.js`
    `sw.js` `manifest.json` `icon-180.png` `icon-192.png` `icon-512.png`
    (`build-preview.js`, `preview.html`은 확인용이라 올리지 않아도 됩니다)
 3. Settings → Pages → Source: `Deploy from a branch` → `main` / `/(root)` → Save
@@ -41,7 +42,7 @@
 
 - 홈 화면 아이콘(`icon-*.png`)과 `manifest.json`으로 앱처럼 열림
 - `sw.js`가 파일을 저장해 두어 **인터넷 없이도 열림**. 새 파일은 뒤에서 받아 다음 실행 때 반영
-- 파일을 고쳐 올릴 때는 `sw.js`의 `CACHE = 'kor-v1'` 숫자를 올려 주세요 (예: `kor-v2`)
+- 파일을 고쳐 올릴 때는 `sw.js`의 `CACHE = 'kor-v3'` 숫자를 올려 주세요 (예: `kor-v4`)
 
 ## 기능을 고치거나 추가할 때
 
@@ -62,7 +63,7 @@
 | 저장소 | 내용 |
 |---|---|
 | `reading` | 독해 노트 (구분·제목·내용·상단고정) |
-| `exams` | 시행일, 출제(평가원/교육청/사설/기타), 시험명, 선택과목, 원점수·표준점수·백분위·등급, 독서/문학/선택 오답 수, 소요 시간, 총평 |
+| `exams` | 시행일, 출제(평가원/교육청/사설/기타), 시험명, 선택과목, 원점수·표준점수·백분위·등급, 독서/문학/선택 오답 수, 소요 시간, 메모·총평, 행동강령 |
 | `passages` | 영역(독서·문학), 제재(인문/철학/사회/경제/과학/기술 · 고전산문/현대산문/고전시가/현대시), 지문명, 출처, 문항수·오답수, 체감 난이도, 오답 원인, 풀이 방식, 오답 정리 |
 
 ## 인쇄 (A4)

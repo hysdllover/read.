@@ -162,6 +162,19 @@ var SettingsView = (function () {
     g2.appendChild(grid);
     root.appendChild(g2);
 
+    /* 화면 (기기별) */
+    var g6 = h('<section><div class="sec-h"><h2>화면</h2><span class="more">이 기기에만 적용</span></div></section>');
+    var c6 = h('<div class="card"></div>');
+    var fsNow = App.fontSize();
+    var fsf = form(fSeg('글자 크기', 'fs', ['작게', '보통', '크게'], { s: '작게', m: '보통', l: '크게' }[fsNow]));
+    bindForm(fsf);
+    fsf.querySelector('[data-seg="fs"]').addEventListener('pick', function (e) {
+      App.fontSize({ '작게': 's', '보통': 'm', '크게': 'l' }[e.detail]);
+    });
+    c6.appendChild(fsf);
+    g6.appendChild(c6);
+    root.appendChild(g6);
+
     /* 인쇄 */
     var g5 = h('<section><div class="sec-h"><h2>인쇄</h2><span class="more">A4</span></div></section>');
     var rp = h('<button type="button" class="btn full">A4 리포트 (그래프 · 전체)</button>');
@@ -208,6 +221,6 @@ var SettingsView = (function () {
 })();
 
 App.register({
-  id: 'settings', label: '설정', title: '설정', icon: '◌',
+  id: 'settings', label: '설정', title: '설정', icon: '◌', hidden: true,
   render: SettingsView.render
 });
