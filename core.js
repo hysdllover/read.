@@ -5,6 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
+var APP_VER = 'kor-v6';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -348,7 +349,17 @@ var App = {
     });
     /* 오프라인 실행 (지원 안 하는 환경은 그냥 넘어감) */
     try {
-      if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(function () { });
+      if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        var hadCtrl = !!navigator.serviceWorker.controller, reloaded = false;
+        /* 새 버전이 설치되면 한 번 새로고침해 최신 파일로 다시 연다 */
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (hadCtrl && !reloaded) { reloaded = true; location.reload(); }
+        });
+        navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+          /* 앱으로 돌아올 때마다 새 버전 확인 (홈 화면 앱은 완전히 닫히지 않는 경우가 많음) */
+          document.addEventListener('visibilitychange', function () { if (!document.hidden) reg.update().catch(function () { }); });
+        }).catch(function () { });
+      }
     } catch (e) { }
   }
 };
