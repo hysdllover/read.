@@ -45,7 +45,7 @@ body{
 }
 h1,h2,h3,h4{margin:0;font-weight:var(--wb);letter-spacing:-.02em;}
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
-button{background:none;border:0;padding:0;cursor:pointer;}
+button{background:none;border:0;padding:0;cursor:pointer;font-weight:inherit;}
 input,select,textarea{-webkit-appearance:none;appearance:none;}
 
 /* ===== 상단바 ===== */
@@ -388,7 +388,7 @@ section{margin-bottom:22px;}
 .chip.good{color:var(--good);background:rgba(122,132,101,.12);}
 .chip.bad{color:var(--bad);background:rgba(168,134,138,.13);}
 .rule-card{display:block;width:100%;text-align:left;border-left:2px solid var(--violet) !important;}
-.rule-body{font-size:.875rem;line-height:1.75;white-space:pre-wrap;word-break:break-word;color:var(--t1);}
+.rule-body{font-size:var(--fs);font-weight:var(--w);line-height:1.75;white-space:pre-wrap;word-break:break-word;color:var(--t1);}
 .weak-h{font-size:.625rem;color:var(--t3);letter-spacing:.03em;margin:2px 0 2px;}
 .weak-h + .bar-row{margin-top:6px;}
 .weak .bar-row + .weak-h{margin-top:14px;}
@@ -452,3 +452,8 @@ section{margin-bottom:22px;}
 .font-prev{margin-top:4px;padding:12px 14px;border-radius:var(--r-s);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line-2);}
 .fp-n{font-size:1.4rem;font-weight:250;letter-spacing:-.03em;color:var(--navy);}
 .fp-t{font-size:.8125rem;color:var(--t1);margin-top:4px;line-height:1.7;}
+.my-font{margin:-2px 0 12px;display:grid;gap:8px;}
+.mf-row{display:flex;align-items:center;gap:8px;}
+.mf-row .btn{flex:0 0 auto;}
+.mf-name{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mf-in{flex:1 1 auto;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-s);padding:8px 10px;font-size:max(16px,1rem);font-weight:var(--w);}

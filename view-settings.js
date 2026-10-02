@@ -43,7 +43,7 @@ var SettingsView = (function () {
     });
   }
 
-  function colorSheet(g) {
+  function colorSheet(g, title) {
     var cur = Store.color(g);
     var body = h('<div></div>');
     body.innerHTML = '<div class="f"><label>색상 선택</label><div class="seg">' +
@@ -63,7 +63,7 @@ var SettingsView = (function () {
     });
     body.querySelector('[data-pick]').oninput = function (e) { chosen = e.target.value; };
     openSheet({
-      title: g + ' 색상', body: body,
+      title: (title || g) + ' 색상', body: body,
       onOk: function () { Store.data.settings.colors[g] = chosen; Store.touchSettings(); App.refresh(); },
       onDelete: function () {
         delete Store.data.settings.colors[g]; Store.touchSettings(); App.refresh(); toast('기본 색상으로 되돌렸습니다');
@@ -162,6 +162,18 @@ var SettingsView = (function () {
     g2.appendChild(grid);
     root.appendChild(g2);
 
+    var g8 = h('<section><div class="sec-h"><h2>영역별 오답 색상</h2><span class="more">그래프 · 탭하여 변경</span></div></section>');
+    var grid8 = h('<div class="grid3"></div>');
+    ['독서', '문학', '선택'].forEach(function (a) {
+      var b = h('<button type="button" class="stat row" style="gap:7px;align-items:center">' +
+        '<span class="dot" style="width:10px;height:10px;border-radius:3px;background:' + Store.color('영역:' + a) + '"></span>' +
+        '<span class="t-s muted">' + a + ' 오답</span></button>');
+      b.onclick = function () { colorSheet('영역:' + a, a + ' 오답'); };
+      grid8.appendChild(b);
+    });
+    g8.appendChild(grid8);
+    root.appendChild(g8);
+
     /* 화면 (기기별) */
     var g6 = h('<section><div class="sec-h"><h2>화면</h2><span class="more">이 기기에만 적용</span></div></section>');
     var c6 = h('<div class="card"></div>');
@@ -170,7 +182,14 @@ var SettingsView = (function () {
       '<div class="f"><label>글자 크기 <span class="fs-val num"></span></label>' +
       '<input type="range" class="range" min="13" max="20" step="0.5" value="' + ft.size + '" data-fsize></div>' +
       fSeg('굵기', 'weight', Object.keys(App.WEIGHTS), ft.weight) +
-      fSeg('글꼴', 'family', Object.keys(App.FONTS), ft.family) +
+      fSeg('글꼴', 'family', Object.keys(App.FONTS).concat(['내 글꼴', '직접 입력']), ft.family || '시스템') +
+      '<div class="my-font">' +
+      '<div class="mf-row"><label class="btn">글꼴 파일 올리기<input type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden data-ffile></label>' +
+      '<span class="t-xs dim mf-name"></span><button type="button" class="t-xs dim mf-del" hidden>삭제</button></div>' +
+      '<div class="mf-row"><input type="text" class="mf-in" data-fcustom placeholder="구글 폰트 이름 (예: Gowun Batang)" value="' + esc(ft.custom || '') + '">' +
+      '<button type="button" class="btn" data-fapply>적용</button></div>' +
+      '<div class="t-xs dim">파일은 이 기기에만 저장되고 인터넷 없이도 쓸 수 있습니다. 아이폰에 설치한 글꼴은 Safari 웹앱에서 쓸 수 없어 파일로 올려 주세요.</div>' +
+      '</div>' +
       '<div class="font-prev"><div class="fp-n num">D-48 · 백분위 96</div>' +
       '<div class="fp-t">첫 문단에서 화제와 글의 방향을 확정한다. 근거 문장은 반드시 지문에 표시한다.</div></div>'
     );
@@ -180,7 +199,55 @@ var SettingsView = (function () {
     showSize(ft.size);
     rng.addEventListener('input', function () { App.font({ size: +rng.value }); showSize(+rng.value); });
     fsf.querySelector('[data-seg="weight"]').addEventListener('pick', function (e) { App.font({ weight: e.detail }); });
-    fsf.querySelector('[data-seg="family"]').addEventListener('pick', function (e) { App.font({ family: e.detail }); });
+    var famSeg = fsf.querySelector('[data-seg="family"]');
+    function pickFam(name) {
+      famSeg.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === name); });
+    }
+    famSeg.addEventListener('pick', function (e) {
+      if (e.detail === '내 글꼴') {
+        App.fontDB('get').then(function (rec) {
+          if (!rec) { toast('먼저 글꼴 파일을 올려 주세요'); pickFam(App.font().family || '시스템'); return; }
+          App.font({ family: '내 글꼴' });
+        });
+      } else if (e.detail === '직접 입력') {
+        var v = fsf.querySelector('[data-fcustom]').value.trim();
+        if (!v) { toast('아래 칸에 구글 폰트 이름을 입력해 주세요'); pickFam(App.font().family || '시스템'); return; }
+        App.font({ family: '직접 입력', custom: v });
+      } else App.font({ family: e.detail });
+    });
+    var mfName = fsf.querySelector('.mf-name'), mfDel = fsf.querySelector('.mf-del');
+    function showMine() {
+      App.fontDB('get').then(function (rec) {
+        mfName.textContent = rec ? rec.name : '';
+        mfDel.hidden = !rec;
+      });
+    }
+    showMine();
+    fsf.querySelector('[data-ffile]').onchange = function (e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      if (!/\.(ttf|otf|woff2?)$/i.test(file.name)) { toast('ttf · otf · woff 파일만 쓸 수 있습니다'); return; }
+      App.fontDB('put', { name: file.name, blob: file }).then(function (ok) {
+        if (!ok) { toast('저장할 수 없습니다'); return; }
+        App._myFont = false;
+        document.fonts && document.fonts.forEach(function (f) { if (f.family === 'MyFont') document.fonts.delete(f); });
+        App.loadMyFont().then(function (loaded) {
+          if (!loaded) { toast('글꼴 파일을 읽을 수 없습니다'); return; }
+          App.font({ family: '내 글꼴' }); pickFam('내 글꼴'); showMine(); toast('내 글꼴을 적용했습니다');
+        });
+      });
+    };
+    mfDel.onclick = function () {
+      App.fontDB('del').then(function () {
+        if (App.font().family === '내 글꼴') { App.font({ family: '시스템' }); pickFam('시스템'); }
+        showMine(); toast('글꼴 파일을 지웠습니다');
+      });
+    };
+    fsf.querySelector('[data-fapply]').onclick = function () {
+      var v = fsf.querySelector('[data-fcustom]').value.trim();
+      if (!v) { toast('구글 폰트 이름을 입력해 주세요'); return; }
+      App.font({ family: '직접 입력', custom: v }); pickFam('직접 입력'); toast(v + ' 적용');
+    };
     var fsReset = h('<button type="button" class="btn full" style="margin-top:10px">기본값 (작고 얇게)</button>');
     fsReset.onclick = function () { LS.removeItem(APP_KEY + ':font'); App.font(); App.refresh(); };
     fsf.appendChild(fsReset);

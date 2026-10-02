@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v6';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v7';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -44,7 +44,9 @@ var DEFAULT_COLORS = {
   '인문': '#6E7C99', '사회': '#7A8465', '경제': '#8C8768',
   '과학': '#6E8C8A', '기술': '#8A7E72',
   '고전소설': '#99857A', '현대소설': '#A08A8A', '현대시': '#8085A0',
-  '고전시가': '#85956E', '극/수필': '#7C7A99'
+  '고전시가': '#85956E', '극/수필': '#7C7A99',
+  /* 영역별 오답 그래프 색 */
+  '영역:독서': '#5b6b85', '영역:문학': '#8f8aae', '영역:선택': '#b3a78a'
 };
 var SWATCHES = ['#6E7C99', '#8085A0', '#7C7A99', '#A08A8A', '#99857A',
   '#7A8465', '#85956E', '#8C8768', '#6E8C8A', '#8A8A90'];
@@ -316,21 +318,59 @@ var App = {
       url: 'https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap' }
   },
   WEIGHTS: { '가늘게': 200, '얇게': 300, '보통': 400 },
+  /* 내 글꼴 파일은 용량이 커서 IndexedDB에 보관 (이 기기에만) */
+  fontDB: function (mode, blob) {
+    return new Promise(function (res) {
+      try {
+        var rq = indexedDB.open(APP_KEY + '-font', 1);
+        rq.onupgradeneeded = function () { rq.result.createObjectStore('f'); };
+        rq.onerror = function () { res(null); };
+        rq.onsuccess = function () {
+          var tx = rq.result.transaction('f', mode === 'get' ? 'readonly' : 'readwrite'), st = tx.objectStore('f');
+          var r = mode === 'get' ? st.get('my') : (mode === 'put' ? st.put(blob, 'my') : st.delete('my'));
+          r.onsuccess = function () { res(mode === 'get' ? r.result || null : true); };
+          r.onerror = function () { res(null); };
+        };
+      } catch (e) { res(null); }
+    });
+  },
+  loadMyFont: function () {
+    if (this._myFont) return Promise.resolve(true);
+    var self = this;
+    return this.fontDB('get').then(function (rec) {
+      if (!rec || !window.FontFace) return false;
+      return rec.blob.arrayBuffer().then(function (buf) {
+        var ff = new FontFace('MyFont', buf, { weight: '100 900' });
+        return ff.load().then(function (f) { document.fonts.add(f); self._myFont = true; return true; });
+      }).catch(function () { return false; });
+    });
+  },
   font: function (patch) {
     var f = {};
     try { f = JSON.parse(LS.getItem(APP_KEY + ':font')) || {}; } catch (e) { }
     if (patch) { f = Object.assign(f, patch); LS.setItem(APP_KEY + ':font', JSON.stringify(f)); }
     if (!f.size) f.size = 15;                      // 기준 크기(px) — 본문은 이 값의 81%
     if (!this.WEIGHTS[f.weight]) f.weight = '얇게';
-    if (!this.FONTS[f.family]) f.family = '시스템';
-    var root = document.documentElement, fam = this.FONTS[f.family], w = this.WEIGHTS[f.weight];
+    var fallback = '-apple-system,"Apple SD Gothic Neo",sans-serif', css, url;
+    if (f.family === '내 글꼴') {
+      css = '"MyFont",' + fallback;
+      this.loadMyFont();
+    } else if (f.family === '직접 입력' && f.custom) {
+      /* 구글 폰트 이름(예: Gowun Batang). 없는 이름이면 기본 글꼴로 보임 */
+      css = '"' + f.custom.replace(/["\\]/g, '') + '",' + fallback;
+      url = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(f.custom.trim()).replace(/%20/g, '+') + ':wght@100;200;300;400;500;600;700&display=swap';
+    } else {
+      if (!this.FONTS[f.family]) f.family = '시스템';
+      css = this.FONTS[f.family].css; url = this.FONTS[f.family].url;
+    }
+    var root = document.documentElement, w = this.WEIGHTS[f.weight];
     root.style.fontSize = f.size + 'px';
     root.style.setProperty('--w', w);
     root.style.setProperty('--wb', w + 150);
-    root.style.setProperty('--font', fam.css);
-    if (fam.url && !document.querySelector('link[data-font="' + f.family + '"]')) {
+    root.style.setProperty('--font', css);
+    if (url && !document.querySelector('link[data-font="' + url + '"]')) {
       var l = document.createElement('link');
-      l.rel = 'stylesheet'; l.href = fam.url; l.dataset.font = f.family;
+      l.rel = 'stylesheet'; l.href = url; l.dataset.font = url;
       document.head.appendChild(l);
     }
     return f;
