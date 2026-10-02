@@ -246,6 +246,7 @@ var App = {
     document.querySelectorAll('#tabbar button').forEach(function (b) {
       b.classList.toggle('on', b.dataset.id === cur.id);
     });
+    document.getElementById('btnSet').classList.toggle('on', cur.id === 'settings');
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { }
     window.scrollTo(0, 0);
   },
@@ -254,6 +255,7 @@ var App = {
     nav.innerHTML = '';
     var self = this;
     this.views.forEach(function (v) {
+      if (v.hidden) return;   // 설정 등 탭바에 없는 화면 (상단 아이콘으로 진입)
       var b = document.createElement('button');
       b.type = 'button';
       b.dataset.id = v.id;
@@ -285,8 +287,20 @@ var App = {
     CODE = null;
     showGate();
   },
+  /* 글자 크기 (기기별 저장). 기본: 아이패드 크게, 아이폰 보통 */
+  FS: { s: 15, m: 16, l: 17.5 },
+  fontSize: function (v) {
+    if (v) LS.setItem(APP_KEY + ':fs', v);
+    var cur = LS.getItem(APP_KEY + ':fs');
+    if (!this.FS[cur]) cur = Math.min(screen.width, screen.height) >= 744 ? 'l' : 'm';
+    document.documentElement.style.fontSize = this.FS[cur] + 'px';
+    return cur;
+  },
   start: function () {
+    this.fontSize();
     this.buildTabs();
+    var self = this;
+    document.getElementById('btnSet').onclick = function () { self.go(self.route === 'settings' ? self.views[0].id : 'settings'); };
     var saved = LS.getItem(APP_KEY + ':code');
     if (saved !== null && saved !== '') this.login(saved);
     else showGate();

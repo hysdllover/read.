@@ -45,6 +45,8 @@ var Report = (function () {
       statCard('목표 달성', st.hitN + '/' + st.pctN, '회') +
       statCard('평균 백분위', r1(avg(exams.filter(function (e) { return e.pct != null; }).map(function (e) { return e.pct; }))), '') +
       '</div>');
+    var wr = exams.filter(function (e) { return e.rule; })[0];
+    if (wr) out += sec('다음 시험 행동강령', '<div class="card rule-card"><div class="rule-body">' + esc(wr.rule) + '</div></div>', esc(ExamView.label(wr)));
     out += charts(chron, s);
     var last = chron.slice(-12);
     function row(k, f) { return '<tr><th>' + k + '</th>' + last.map(function (e) { var v = f(e); return '<td>' + esc(v == null ? '–' : v) + '</td>'; }).join('') + '</tr>'; }

@@ -25,8 +25,8 @@ var GenreView = (function () {
       '<div class="f-row">' + fNum('문항 수', 'qn', it.qn, '개') + fNum('틀린 개수', 'wrong', it.wrong, '개') + '</div>' +
       fStars('체감 난이도', 'diff', it.diff) +
       fChips('오답 원인', 'types', WRONG_TYPES, it.types) +
-      fArea('풀이 방식', 'method', it.method, '어떻게 읽고 어떤 순서로 풀었는지') +
-      fArea('오답 정리 / 배운 점', 'note', it.note, '틀린 문항 번호, 근거 문장, 다음에 적용할 규칙')
+      fArea('풀이 방식', 'method', it.method, '어떻게 읽고 어떤 순서로 풀었는지', true) +
+      fArea('오답 정리 / 배운 점', 'note', it.note, '틀린 문항 번호, 근거 문장, 다음에 적용할 규칙', true)
     );
     bindForm(f);
     var aseg = f.querySelector('[data-seg="area"]');
@@ -67,6 +67,7 @@ var GenreView = (function () {
       seg.appendChild(b);
     });
     root.appendChild(seg);
+    var cc = cols(root), A = cc[0], B = cc[1];
 
     /* 제재별 요약 */
     var sec = h('<section><div class="sec-h"><h2>' + (area === '독서' ? '제재별 현황' : '갈래별 현황') +
@@ -85,7 +86,7 @@ var GenreView = (function () {
       grid.appendChild(c);
     });
     sec.appendChild(grid);
-    root.appendChild(sec);
+    A.appendChild(sec);
 
     /* 오답 원인 분포 */
     var cnt = {};
@@ -99,7 +100,7 @@ var GenreView = (function () {
       }).join('');
       b2.querySelectorAll('.bar-row .lb').forEach(function (el) { el.style.fontSize = '10px'; });
       s2.appendChild(b2);
-      root.appendChild(s2);
+      A.appendChild(s2);
     }
 
     /* 목록 */
@@ -108,7 +109,7 @@ var GenreView = (function () {
       (pick ? '<span class="more">탭하여 필터 해제</span>' : '') + '</div></section>');
     if (!list.length) {
       s3.appendChild(h(emptyBox('아직 기록이 없습니다', '＋로 지문 하나씩 남겨 두면 약한 제재가 보입니다')));
-      root.appendChild(s3);
+      B.appendChild(s3);
       return;
     }
     var ul = h('<div class="list"></div>');
@@ -128,7 +129,7 @@ var GenreView = (function () {
       ul.appendChild(it);
     });
     s3.appendChild(ul);
-    root.appendChild(s3);
+    B.appendChild(s3);
   }
 
   return { render: render, editor: editor };
