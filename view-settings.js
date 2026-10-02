@@ -165,12 +165,25 @@ var SettingsView = (function () {
     /* 화면 (기기별) */
     var g6 = h('<section><div class="sec-h"><h2>화면</h2><span class="more">이 기기에만 적용</span></div></section>');
     var c6 = h('<div class="card"></div>');
-    var fsNow = App.fontSize();
-    var fsf = form(fSeg('글자 크기', 'fs', ['작게', '보통', '크게'], { s: '작게', m: '보통', l: '크게' }[fsNow]));
+    var ft = App.font();
+    var fsf = form(
+      '<div class="f"><label>글자 크기 <span class="fs-val num"></span></label>' +
+      '<input type="range" class="range" min="13" max="20" step="0.5" value="' + ft.size + '" data-fsize></div>' +
+      fSeg('굵기', 'weight', Object.keys(App.WEIGHTS), ft.weight) +
+      fSeg('글꼴', 'family', Object.keys(App.FONTS), ft.family) +
+      '<div class="font-prev"><div class="fp-n num">D-48 · 백분위 96</div>' +
+      '<div class="fp-t">첫 문단에서 화제와 글의 방향을 확정한다. 근거 문장은 반드시 지문에 표시한다.</div></div>'
+    );
     bindForm(fsf);
-    fsf.querySelector('[data-seg="fs"]').addEventListener('pick', function (e) {
-      App.fontSize({ '작게': 's', '보통': 'm', '크게': 'l' }[e.detail]);
-    });
+    var rng = fsf.querySelector('[data-fsize]'), val = fsf.querySelector('.fs-val');
+    function showSize(v) { val.textContent = '· 본문 ' + (Math.round(v * 0.8125 * 10) / 10) + 'px'; }
+    showSize(ft.size);
+    rng.addEventListener('input', function () { App.font({ size: +rng.value }); showSize(+rng.value); });
+    fsf.querySelector('[data-seg="weight"]').addEventListener('pick', function (e) { App.font({ weight: e.detail }); });
+    fsf.querySelector('[data-seg="family"]').addEventListener('pick', function (e) { App.font({ family: e.detail }); });
+    var fsReset = h('<button type="button" class="btn full" style="margin-top:10px">기본값 (작고 얇게)</button>');
+    fsReset.onclick = function () { LS.removeItem(APP_KEY + ':font'); App.font(); App.refresh(); };
+    fsf.appendChild(fsReset);
     c6.appendChild(fsf);
     g6.appendChild(c6);
     root.appendChild(g6);

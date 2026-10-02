@@ -1,7 +1,7 @@
 /* sw.js — 오프라인 실행용. 파일을 고쳐 올릴 때 CACHE 숫자를 올리면 새 버전으로 교체됩니다. */
 'use strict';
 
-var CACHE = 'kor-v3';
+var CACHE = 'kor-v4';
 var FILES = ['./', 'index.html', 'style.css', 'core.js', 'ui.js', 'sync.js',
   'view-home.js', 'view-reading.js', 'view-exam.js', 'view-genre.js', 'view-settings.js', 'view-report.js',
   'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];

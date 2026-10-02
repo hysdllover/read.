@@ -287,17 +287,43 @@ var App = {
     CODE = null;
     showGate();
   },
-  /* 글자 크기 (기기별 저장). 기본: 아이패드 크게, 아이폰 보통 */
-  FS: { s: 15, m: 16, l: 17.5 },
-  fontSize: function (v) {
-    if (v) LS.setItem(APP_KEY + ':fs', v);
-    var cur = LS.getItem(APP_KEY + ':fs');
-    if (!this.FS[cur]) cur = Math.min(screen.width, screen.height) >= 744 ? 'l' : 'm';
-    document.documentElement.style.fontSize = this.FS[cur] + 'px';
-    return cur;
+  /* 글꼴 · 크기 · 굵기 (기기별 저장). 기본: 작고 얇게 */
+  FONTS: {
+    '시스템': { css: '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif' },
+    '프리텐다드': { css: '"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo",sans-serif',
+      url: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css' },
+    'IBM 플렉스': { css: '"IBM Plex Sans KR",-apple-system,"Apple SD Gothic Neo",sans-serif',
+      url: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@100;200;300;400;500;600&display=swap' },
+    '노토 산스': { css: '"Noto Sans KR",-apple-system,"Apple SD Gothic Neo",sans-serif',
+      url: 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..700&display=swap' },
+    '고운 돋움': { css: '"Gowun Dodum",-apple-system,"Apple SD Gothic Neo",sans-serif',
+      url: 'https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap' },
+    '나눔 명조': { css: '"Nanum Myeongjo","AppleMyungjo",serif',
+      url: 'https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap' }
+  },
+  WEIGHTS: { '가늘게': 200, '얇게': 300, '보통': 400 },
+  font: function (patch) {
+    var f = {};
+    try { f = JSON.parse(LS.getItem(APP_KEY + ':font')) || {}; } catch (e) { }
+    if (patch) { f = Object.assign(f, patch); LS.setItem(APP_KEY + ':font', JSON.stringify(f)); }
+    if (!f.size) f.size = 15;                      // 기준 크기(px) — 본문은 이 값의 81%
+    if (!this.WEIGHTS[f.weight]) f.weight = '얇게';
+    if (!this.FONTS[f.family]) f.family = '시스템';
+    var root = document.documentElement, fam = this.FONTS[f.family], w = this.WEIGHTS[f.weight];
+    root.style.fontSize = f.size + 'px';
+    root.style.setProperty('--w', w);
+    root.style.setProperty('--wb', w + 150);
+    root.style.setProperty('--font', fam.css);
+    if (fam.url && !document.querySelector('link[data-font="' + f.family + '"]')) {
+      var l = document.createElement('link');
+      l.rel = 'stylesheet'; l.href = fam.url; l.dataset.font = f.family;
+      document.head.appendChild(l);
+    }
+    return f;
   },
   start: function () {
-    this.fontSize();
+    LS.removeItem(APP_KEY + ':fs');   // 이전 3단계 설정은 정리
+    this.font();
     this.buildTabs();
     var self = this;
     document.getElementById('btnSet').onclick = function () { self.go(self.route === 'settings' ? self.views[0].id : 'settings'); };
