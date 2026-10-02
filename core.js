@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v8';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v9';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -234,6 +234,59 @@ function showGate() {
   document.getElementById('tabbar').hidden = true;
 }
 
+/* ---- 테마 색상 (설정에 저장, 기기 연동) ---- */
+var THEME_KEYS = [
+  ['accent', '기본 · 그래프'], ['good', '목표 달성'], ['bad', '목표 미달'], ['hl', '강조 · 행동강령'],
+  ['bg', '배경'], ['card', '카드'], ['text', '글자']
+];
+var THEME_DEFAULT = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
+var THEME_PRESETS = {
+  '기본': THEME_DEFAULT,
+  '라벤더': { accent: '#7c7a99', good: '#85956e', bad: '#a08a8a', hl: '#9a8fb8', bg: '#f6f5f9', card: '#ffffff', text: '#25242b' },
+  '세이지': { accent: '#6e8c8a', good: '#7a8465', bad: '#99857a', hl: '#8085a0', bg: '#f3f5f3', card: '#ffffff', text: '#202422' },
+  '로즈': { accent: '#8f7782', good: '#7f8a6a', bad: '#a07070', hl: '#8f8aae', bg: '#f8f5f5', card: '#ffffff', text: '#2a2325' },
+  '샌드': { accent: '#857d66', good: '#7a8465', bad: '#a08a8a', hl: '#8085a0', bg: '#f6f5f1', card: '#fffefb', text: '#26251f' },
+  '나이트': { accent: '#8fa0bd', good: '#9aa883', bad: '#c39ca0', hl: '#aaa5c8', bg: '#1b1f27', card: '#242933', text: '#e4e6ec' }
+};
+function hexRgb(h) { h = String(h || '').replace('#', ''); if (h.length === 3) h = h.replace(/./g, '$&$&'); var n = parseInt(h, 16) || 0; return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function rgbHex(c) { return '#' + c.map(function (v) { return ('0' + Math.round(Math.max(0, Math.min(255, v))).toString(16)).slice(-2); }).join(''); }
+function mixHex(a, b, t) { var x = hexRgb(a), y = hexRgb(b); return rgbHex(x.map(function (v, i) { return v + (y[i] - v) * t; })); }
+function hueOf(h) {
+  var c = hexRgb(h).map(function (v) { return v / 255; }), mx = Math.max.apply(null, c), mn = Math.min.apply(null, c), d = mx - mn;
+  if (!d) return { h: 0, s: 0 };
+  var hu = mx === c[0] ? ((c[1] - c[2]) / d) % 6 : mx === c[1] ? (c[2] - c[0]) / d + 2 : (c[0] - c[1]) / d + 4;
+  return { h: (hu * 60 + 360) % 360, s: d / (1 - Math.abs(mx + mn - 1) || 1) };
+}
+/* '내 제재 톤': 설정한 제재 색 중 목표 색상(파랑·초록·빨강·보라)에 가장 가까운 것을 골라 테마로 */
+function themeFromGenres() {
+  var cs = ALL_GENRES.map(function (g) { return Store.color(g); });
+  function near(target) {
+    var best = cs[0], bd = 999;
+    cs.forEach(function (c) { var hh = hueOf(c), d = Math.min(Math.abs(hh.h - target), 360 - Math.abs(hh.h - target)) - hh.s * 20; if (d < bd) { bd = d; best = c; } });
+    return best;
+  }
+  var accent = near(222);
+  return { accent: accent, good: near(85), bad: near(355), hl: near(265),
+    bg: mixHex(accent, '#ffffff', 0.94), card: '#ffffff', text: mixHex(accent, '#121317', 0.82) };
+}
+function currentTheme() { return Object.assign({}, THEME_DEFAULT, (Store.data && Store.data.settings.theme) || {}); }
+function applyTheme(t) {
+  t = t || currentTheme();
+  var r = document.documentElement.style, dark = hexRgb(t.bg).reduce(function (a, v) { return a + v; }, 0) < 384;
+  var set = function (k, v) { r.setProperty(k, v); };
+  set('--accent', t.accent); set('--navy', t.accent);
+  set('--good', t.good); set('--olive', t.good);
+  set('--bad', t.bad); set('--rose', t.bad); set('--danger', t.bad);
+  set('--violet', t.hl);
+  set('--bg', t.bg); set('--surface', t.card); set('--surface-2', mixHex(t.card, t.bg, 0.5));
+  set('--t1', t.text); set('--t2', mixHex(t.text, t.card, 0.45)); set('--t3', mixHex(t.text, t.card, 0.62));
+  set('--line', mixHex(t.card, t.text, dark ? 0.16 : 0.1)); set('--line-2', mixHex(t.card, t.text, dark ? 0.09 : 0.055));
+  var bc = hexRgb(t.bg), cc = hexRgb(t.card);
+  set('--bar', 'rgba(' + bc.join(',') + ',.92)'); set('--tab', 'rgba(' + cc.join(',') + ',.94)');
+  set('--on-t1', t.card);
+  var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.bg;
+}
+
 /* ---- 라우터 ---- */
 var App = {
   views: [],
@@ -249,6 +302,7 @@ var App = {
     if (CODE === null) return;
     var cur = this.view();
     this.route = cur.id;
+    applyTheme();
     var old = document.getElementById('main');
     var main = document.createElement('main');
     main.id = 'main';

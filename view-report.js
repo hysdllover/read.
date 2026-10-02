@@ -48,14 +48,25 @@ var Report = (function () {
     var wr = exams.filter(function (e) { return e.rule; })[0];
     if (wr) out += sec('다음 시험 행동강령', '<div class="card rule-card"><div class="rule-body">' + esc(wr.rule) + '</div></div>', esc(ExamView.label(wr)));
     out += charts(chron, s);
-    var last = chron.slice(-12);
-    function row(k, f) { return '<tr><th>' + k + '</th>' + last.map(function (e) { var v = f(e); return '<td>' + esc(v == null ? '–' : v) + '</td>'; }).join('') + '</tr>'; }
-    out += sec('점수 기록', '<table class="rp-t rp-row"><tbody>' +
-      row('시행일', ExamView.shortDate) +
-      row('원점수', function (e) { return e.raw; }) +
-      row('백분위', function (e) { return e.pct; }) +
-      row('등급', function (e) { return e.grade; }) +
-      '</tbody></table>', chron.length > 12 ? '최근 12회' : '');
+    /* 점수 표: 기록 전부, 12회씩 끊어 여러 줄로 */
+    var N = 15, blocks = '';
+    var years = {}; chron.forEach(function (e) { years[(e.date || '').slice(0, 4)] = 1; });
+    var multiYear = Object.keys(years).length > 1;
+    var dlabel = function (e) { return multiYear ? (e.date || '').slice(2).replace(/\./g, '/') : ExamView.shortDate(e); };
+    for (var i = 0; i < chron.length; i += N) {
+      var part = chron.slice(i, i + N);
+      var pad = ''; for (var j = part.length; j < N; j++) pad += '<td></td>';
+      var row = function (k, f) {
+        return '<tr><th>' + k + '</th>' + part.map(function (e) { var v = f(e); return '<td>' + esc(v == null ? '–' : v) + '</td>'; }).join('') + pad + '</tr>';
+      };
+      blocks += '<table class="rp-t rp-row"><tbody>' +
+        row('시행일', dlabel) +
+        row('원점수', function (e) { return e.raw; }) +
+        row('백분위', function (e) { return e.pct; }) +
+        row('등급', function (e) { return e.grade; }) +
+        '</tbody></table>';
+    }
+    out += sec('점수 기록', blocks, '전체 ' + chron.length + '회');
     return out;
   }
 

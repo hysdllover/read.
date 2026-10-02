@@ -43,6 +43,10 @@ var SettingsView = (function () {
     });
   }
 
+  function saveTheme(t) {
+    Store.data.settings.theme = t; Store.touchSettings(); applyTheme(t);
+  }
+
   function colorSheet(g, title) {
     var cur = Store.color(g);
     var body = h('<div></div>');
@@ -148,6 +152,36 @@ var SettingsView = (function () {
     c1.appendChild(f); c1.appendChild(save);
     g1.appendChild(c1);
     root.appendChild(g1);
+
+    /* 테마 색상 */
+    var g9 = h('<section><div class="sec-h"><h2>테마 색상</h2><span class="more">프리셋 선택 후 하나씩 바꿀 수 있음</span></div></section>');
+    var c9 = h('<div class="card"></div>');
+    var presets = Object.assign({ '내 제재 톤': themeFromGenres() }, THEME_PRESETS);
+    var pw = h('<div class="th-presets"></div>');
+    Object.keys(presets).forEach(function (name) {
+      var t = presets[name];
+      var b = h('<button type="button" class="th-p"><i>' + ['accent', 'good', 'bad', 'hl'].map(function (k) {
+        return '<b style="background:' + t[k] + '"></b>';
+      }).join('') + '</i>' + esc(name) + '</button>');
+      b.onclick = function () { var y = window.scrollY; saveTheme(Object.assign({}, presets[name])); App.refresh(); window.scrollTo(0, y); toast(name + ' 적용'); };
+      pw.appendChild(b);
+    });
+    c9.appendChild(pw);
+    var cur = currentTheme();
+    var rows = h('<div class="th-rows"></div>');
+    THEME_KEYS.forEach(function (kv) {
+      var r = h('<label class="th-row"><span>' + esc(kv[1]) + '</span><input type="color" value="' + esc(cur[kv[0]]) + '"></label>');
+      var inp = r.querySelector('input');
+      inp.addEventListener('input', function () { cur[kv[0]] = inp.value; applyTheme(cur); });
+      inp.addEventListener('change', function () { cur[kv[0]] = inp.value; saveTheme(cur); });
+      rows.appendChild(r);
+    });
+    c9.appendChild(rows);
+    var th0 = h('<button type="button" class="btn full" style="margin-top:12px">기본 테마로</button>');
+    th0.onclick = function () { var y = window.scrollY; delete Store.data.settings.theme; Store.touchSettings(); App.refresh(); window.scrollTo(0, y); };
+    c9.appendChild(th0);
+    g9.appendChild(c9);
+    root.appendChild(g9);
 
     /* 색상 */
     var g2 = h('<section><div class="sec-h"><h2>제재 색상</h2><span class="more">탭하여 변경</span></div></section>');
