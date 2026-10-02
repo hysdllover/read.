@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v7';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v8';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -308,12 +308,28 @@ var App = {
     '시스템': { css: '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",system-ui,sans-serif' },
     '프리텐다드': { css: '"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo",sans-serif',
       url: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css' },
+    /* 얇고 단정한 고딕 */
+    'SUIT': { css: '"SUIT Variable",SUIT,-apple-system,"Apple SD Gothic Neo",sans-serif',
+      url: 'https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.css' },
+    '원티드 산스': { css: '"Wanted Sans Variable","Wanted Sans",-apple-system,"Apple SD Gothic Neo",sans-serif',
+      url: 'https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css' },
+    '스포카 한 산스': { css: '"Spoqa Han Sans Neo",-apple-system,"Apple SD Gothic Neo",sans-serif',
+      url: 'https://spoqa.github.io/spoqa-han-sans/css/SpoqaHanSansNeo.css' },
+    '고딕 A1': { css: '"Gothic A1",-apple-system,"Apple SD Gothic Neo",sans-serif',
+      url: 'https://fonts.googleapis.com/css2?family=Gothic+A1:wght@100;200;300;400;500;600&display=swap' },
     'IBM 플렉스': { css: '"IBM Plex Sans KR",-apple-system,"Apple SD Gothic Neo",sans-serif',
       url: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@100;200;300;400;500;600&display=swap' },
     '노토 산스': { css: '"Noto Sans KR",-apple-system,"Apple SD Gothic Neo",sans-serif',
       url: 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..700&display=swap' },
     '고운 돋움': { css: '"Gowun Dodum",-apple-system,"Apple SD Gothic Neo",sans-serif',
       url: 'https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap' },
+    /* 얇은 명조 (고급스러운 느낌) */
+    '노토 세리프': { css: '"Noto Serif KR","AppleMyungjo",serif',
+      url: 'https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@200..700&display=swap' },
+    '함렛': { css: '"Hahmlet","AppleMyungjo",serif',
+      url: 'https://fonts.googleapis.com/css2?family=Hahmlet:wght@100..700&display=swap' },
+    '마루부리': { css: '"MaruBuri","AppleMyungjo",serif',
+      url: 'https://hangeul.pstatic.net/hangeul_static/css/maru-buri.css' },
     '나눔 명조': { css: '"Nanum Myeongjo","AppleMyungjo",serif',
       url: 'https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap' }
   },

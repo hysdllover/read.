@@ -25,8 +25,8 @@ var GenreView = (function () {
       '<div class="f-row">' + fNum('문항 수', 'qn', it.qn, '개') + fNum('틀린 개수', 'wrong', it.wrong, '개') + '</div>' +
       fStars('체감 난이도', 'diff', it.diff) +
       fChips('오답 원인', 'types', WRONG_TYPES, it.types) +
-      fArea('풀이 방식', 'method', it.method, '어떻게 읽고 어떤 순서로 풀었는지', true) +
-      fArea('오답 정리 / 배운 점', 'note', it.note, '틀린 문항 번호, 근거 문장, 다음에 적용할 규칙', true)
+      fArea('오답 정리', 'method', it.method, '틀린 문항 번호, 근거 문장, 왜 틀렸는지', true) +
+      fArea('풀이 방법론 정리', 'note', it.note, '읽는 순서, 표시 규칙, 다음에 적용할 방법', true)
     );
     bindForm(f);
     var aseg = f.querySelector('[data-seg="area"]');
