@@ -150,8 +150,8 @@ var ExamView = (function () {
 
   /* 시험별 독서·문학·선택 오답 누적 막대 */
   var AREA_KEYS = ['독서', '문학', '선택'];
-  var AREA_COLORS = ['var(--navy)', 'var(--violet)', 'var(--sand)'];
   function wrongTrend(all, lg) {
+    var AREA_COLORS = AREA_KEYS.map(function (k) { return Store.color('영역:' + k); });
     var chron = all.slice().reverse();
     var avgs = AREA_KEYS.map(function (k) { return r1(avg(all.map(function (e) { return num((e.w || {})[k], 0); }))); });
     var sec = h('<section><div class="sec-h"><h2>영역별 오답 추이</h2><span class="more">' + legend(AREA_KEYS, AREA_COLORS) + '</span></div></section>');
