@@ -188,6 +188,26 @@ var SettingsView = (function () {
     g6.appendChild(c6);
     root.appendChild(g6);
 
+    /* 기록 정리 */
+    var g7 = h('<section><div class="sec-h"><h2>기록 정리</h2></div></section>');
+    var mv = h('<button type="button" class="btn full">모의고사 메모·총평 → 행동강령으로 옮기기</button>');
+    mv.onclick = function () {
+      var list = Store.data.exams.filter(function (e) { return String(e.memo || '').trim(); });
+      if (!list.length) { toast('옮길 메모가 없습니다'); return; }
+      confirmSheet(list.length + '개 시험의 메모·총평을 행동강령으로 옮깁니다.\n(행동강령이 있으면 아래에 덧붙임)', '옮기기').then(function (ok) {
+        if (!ok) return;
+        list.forEach(function (e) {
+          var memo = String(e.memo).trim(), rule = String(e.rule || '').trim();
+          Store.put('exams', Object.assign({}, e, {
+            rule: !rule ? memo : (rule.indexOf(memo) >= 0 ? rule : rule + '\n' + memo), memo: '', m2r: 1
+          }));
+        });
+        App.refresh(); toast(list.length + '개 옮겼습니다');
+      });
+    };
+    g7.appendChild(mv);
+    root.appendChild(g7);
+
     /* 인쇄 */
     var g5 = h('<section><div class="sec-h"><h2>인쇄</h2><span class="more">A4</span></div></section>');
     var rp = h('<button type="button" class="btn full">A4 리포트 (그래프 · 전체)</button>');
@@ -227,7 +247,7 @@ var SettingsView = (function () {
       });
     };
     root.appendChild(reset);
-    root.appendChild(h('<div class="t-xs dim" style="text-align:center;margin-top:12px">기록은 이 기기에 저장되며, 연동을 켜면 깃허브 비공개 Gist에도 함께 보관됩니다.</div>'));
+    root.appendChild(h('<div class="t-xs dim" style="text-align:center;margin-top:12px">기록은 이 기기에 저장되며, 연동을 켜면 깃허브 비공개 Gist에도 함께 보관됩니다.<br>앱 버전 ' + APP_VER + '</div>'));
   }
 
   return { render: render };
