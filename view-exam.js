@@ -45,7 +45,7 @@ var ExamView = (function () {
         Store.put('exams', Object.assign({}, it, {
           date: v.date, org: v.org, name: v.name, sel: v.sel,
           raw: num(v.raw), pct: num(v.pct),
-          grade: num(v.grade), time: num(v.time), memo: v.memo, rule: v.rule,
+          grade: num(v.grade), time: num(v.time), memo: v.memo, rule: v.rule, m2r: 1,
           w: { '독서': num(v['w독서']), '문학': num(v['w문학']), '선택': num(v['w선택']) }
         }));
         App.refresh();
