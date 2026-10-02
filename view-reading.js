@@ -73,7 +73,7 @@ var ReadingView = (function () {
       var c = h('<div class="card card-tap">' +
         '<div class="row-b"><div class="item-t">' + (it.pin ? '· ' : '') + esc(it.title) + '</div>' +
         '<span class="badge">' + esc(it.cat) + '</span></div>' +
-        (it.body ? '<div class="item-body clamp3">' + esc(it.body) + '</div>' : '') +
+        (it.body ? '<div class="item-body">' + esc(it.body) + '</div>' : '') +
         '</div>');
       c.onclick = function () { editor(it); };
       grid.appendChild(c);
