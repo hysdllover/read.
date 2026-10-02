@@ -88,6 +88,17 @@ function migrate(d) {
       delete out.settings.colors[old];
     }
   });
+  /* 메모·총평 → 행동강령 1회 이동 (시험마다 m2r 표시, 이후 새로 쓴 메모는 그대로) */
+  out.exams.forEach(function (e) {
+    if (e.m2r) return;
+    var memo = String(e.memo || '').trim(), rule = String(e.rule || '').trim();
+    if (memo) {
+      e.rule = !rule ? memo : (rule.indexOf(memo) >= 0 ? rule : rule + '\n' + memo);
+      e.memo = '';
+      e.u = Date.now();   // 다른 기기와 병합할 때 옮긴 쪽이 남도록
+    }
+    e.m2r = 1;
+  });
   out.v = SCHEMA;
   return out;
 }
@@ -99,6 +110,8 @@ var Store = {
     try {
       var raw = LS.getItem(dataKey());
       this.data = raw ? migrate(JSON.parse(raw)) : DEFAULTS();
+      /* 메모→행동강령 이동이 처음 일어난 경우 바로 저장 (연동 중이면 다른 기기에도 반영) */
+      if (raw && raw.indexOf('"m2r"') < 0 && this.data.exams.length) this.save();
     } catch (e) { this.data = DEFAULTS(); }
   },
   save: function (skipSync) {
