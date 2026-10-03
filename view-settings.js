@@ -309,6 +309,50 @@ var SettingsView = (function () {
     g7.appendChild(mv);
     root.appendChild(g7);
 
+    /* 홈 화면 위젯 (Scriptable) */
+    var gw = h('<section><div class="sec-h"><h2>홈 화면 위젯</h2><span class="more">등급 추이</span></div></section>');
+    var cw = h('<div class="card"></div>');
+    cw.innerHTML = '<ol class="steps">' +
+      '<li>앱스토어에서 무료 앱 <b>Scriptable</b> 설치</li>' +
+      '<li>아래 <b>스크립트 복사</b> → Scriptable에서 ＋ 눌러 붙여 넣고 실행</li>' +
+      '<li>처음 실행할 때 깃허브 토큰과 코드(' + esc(CODE) + ') 입력</li>' +
+      '<li>홈 화면 길게 누르기 → ＋ → Scriptable 위젯 추가 → 위젯 길게 눌러 편집 → Script에서 방금 만든 스크립트 선택</li>' +
+      '</ol><div class="t-xs dim" style="margin:6px 0 10px">기기 연동(깃허브)이 켜져 있어야 하고, 위젯은 약 1시간마다 새로 그려집니다. 크기는 작게·중간·크게 모두 됩니다.</div>';
+    var wrow = h('<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>');
+    var cpS = h('<button type="button" class="btn">스크립트 복사</button>');
+    var cpT = h('<button type="button" class="btn">토큰 복사</button>');
+    var scriptText = '';
+    fetch('widget-grade.js', { cache: 'no-cache' }).then(function (r) { return r.text(); }).then(function (t) { scriptText = t; }).catch(function () { });
+    function copy(text, done) {
+      var settled = false;
+      var t = setTimeout(function () { if (!settled) { settled = true; fallback(text); } }, 1500);
+      try {
+        navigator.clipboard.writeText(text).then(function () {
+          if (!settled) { settled = true; clearTimeout(t); toast(done); }
+        }, function () { if (!settled) { settled = true; clearTimeout(t); fallback(text); } });
+      } catch (e) { settled = true; clearTimeout(t); fallback(text); }
+    }
+    function fallback(text) {
+      var ta = h('<textarea style="width:100%;height:160px;font-size:12px"></textarea>');
+      ta.value = text;
+      openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
+    }
+    cpS.onclick = function () {
+      if (!scriptText) { toast('스크립트를 불러오는 중입니다. 잠시 후 다시 눌러 주세요'); return; }
+      copy(scriptText, '스크립트를 복사했습니다');
+    };
+    cpT.onclick = function () {
+      var tk = window.Sync && Sync.cfg().token;
+      if (!tk) { toast('먼저 기기 연동을 켜 주세요'); return; }
+      copy(tk, '토큰을 복사했습니다');
+    };
+    wrow.appendChild(cpS); wrow.appendChild(cpT);
+    cw.appendChild(wrow);
+    var store = h('<a class="btn full" style="margin-top:8px" href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener">Scriptable 앱 받기</a>');
+    cw.appendChild(store);
+    gw.appendChild(cw);
+    root.appendChild(gw);
+
     /* 인쇄 */
     var g5 = h('<section><div class="sec-h"><h2>인쇄</h2><span class="more">A4</span></div></section>');
     var rp = h('<button type="button" class="btn full">A4 리포트 (그래프 · 전체)</button>');

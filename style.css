@@ -484,3 +484,6 @@ section{margin-bottom:22px;}
   .rp-graph .stat .v{font-size:13pt;margin-top:1mm;}
   .rp-graph .rp-row + .rp-row{margin-top:2mm;}
 }
+.steps{margin:0;padding-left:18px;font-size:.75rem;color:var(--t2);line-height:1.8;}
+.steps b{font-weight:var(--wb);color:var(--t1);}
+a.btn{text-decoration:none;}
