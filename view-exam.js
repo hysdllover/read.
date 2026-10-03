@@ -106,6 +106,10 @@ var ExamView = (function () {
       A.appendChild(ph);
     }
 
+    /* 등급 추이 */
+    var gs = gradeTrend(all);
+    if (gs) A.appendChild(gs);
+
     /* 영역별 오답 추이 */
     A.appendChild(wrongTrend(all));
 
@@ -167,6 +171,22 @@ var ExamView = (function () {
     return sec;
   }
 
+  /* 등급 추이: 1등급이 위로 오게 뒤집고, 목표 등급선 */
+  function gradeTrend(all, opt) {
+    opt = opt || {};
+    var s = Store.data.settings;
+    var gc = all.slice().reverse().filter(function (e) { return e.grade != null; });
+    if (opt.last) gc = gc.slice(-opt.last);
+    if (!gc.length) return null;
+    var sec = h('<section><div class="sec-h"><h2>등급 추이</h2><span class="more">' +
+      (s.targetGrade != null ? '<span class="tg-key"></span>목표 ' + esc(s.targetGrade) + '등급' : '') +
+      (opt.last && gc.length === opt.last ? ' · 최근 ' + opt.last + '회' : '') + '</span></div></section>');
+    var box = h('<div class="card"></div>');
+    box.innerHTML = lineChart(gc.map(function (e) { return e.grade; }), gc.map(shortDate), { target: s.targetGrade, invert: true, h: 0.85 });
+    sec.appendChild(box);
+    return sec;
+  }
+
   function shortDate(e) { return (e.date || '').slice(5).replace('.', '/'); }
 
   /* 목표 대비: 최근 백분위·등급 차이, 달성 횟수, D-day */
@@ -203,7 +223,7 @@ var ExamView = (function () {
       (v > 0 ? '+' : '') + esc(v) + (unit ? '<small>' + esc(unit) + '</small>' : '') + '</div></div>';
   }
 
-  return { render: render, editor: editor, label: label, targetStats: targetStats, gapCard: gapCard, shortDate: shortDate, targetSection: targetSection, wrongTrend: wrongTrend };
+  return { render: render, editor: editor, label: label, targetStats: targetStats, gapCard: gapCard, shortDate: shortDate, targetSection: targetSection, wrongTrend: wrongTrend, gradeTrend: gradeTrend };
 })();
 
 App.register({
