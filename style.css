@@ -477,3 +477,10 @@ section{margin-bottom:22px;}
 .th-row input[type=color]{-webkit-appearance:none;appearance:none;width:34px;height:24px;border:0;border-radius:6px;padding:0;background:none;outline:1px solid var(--line);outline-offset:0;}
 .th-row input[type=color]::-webkit-color-swatch-wrapper{padding:0;}
 .th-row input[type=color]::-webkit-color-swatch{border:0;border-radius:6px;}
+.rp-row .yr{display:block;font-size:.8em;color:var(--t3);line-height:1.1;}
+@media print{
+  .rp-graph .rp-row td,.rp-graph .rp-row th{padding:2.5px 3px;}
+  .rp-graph .stat{padding:2.5mm 3mm;}
+  .rp-graph .stat .v{font-size:13pt;margin-top:1mm;}
+  .rp-graph .rp-row + .rp-row{margin-top:2mm;}
+}

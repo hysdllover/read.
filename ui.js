@@ -244,14 +244,17 @@ function lineChart(vals, labels, opt) {
   opt = opt || {};
   if (!vals.length) return '<div class="empty-mini">기록이 쌓이면 추이가 표시됩니다</div>';
   var n = vals.length, lg = wideChart(opt), fr = chartFrame(n, lg), k = fr.k;
-  var T = 18 * k, H = (lg ? 186 : 132) + (fr.tilt ? 12 * k : 0), B = fr.B;
+  var T = 18 * k, H = Math.round((lg ? 186 : 132) * (opt.h || 1)) + (fr.tilt ? 12 * k : 0), B = fr.B;
   var lo = opt.min != null ? opt.min : Math.min.apply(null, vals);
   var hi = opt.max != null ? opt.max : Math.max.apply(null, vals);
   if (opt.target != null) { lo = Math.min(lo, opt.target); hi = Math.max(hi, opt.target); }
   var span = (hi - lo) || 4;
-  lo -= span * 0.18; hi += span * 0.12; span = hi - lo;
+  /* invert: 숫자가 작을수록 위 (등급) */
+  var inv = !!opt.invert;
+  if (inv) { lo -= span * 0.12; hi += span * 0.18; } else { lo -= span * 0.18; hi += span * 0.12; }
+  span = hi - lo;
   function X(i) { return n === 1 ? fr.W / 2 : fr.L + i * fr.gap; }
-  function Y(v) { return T + (1 - (v - lo) / span) * (H - T - B); }
+  function Y(v) { var r = (v - lo) / span; return T + (inv ? r : 1 - r) * (H - T - B); }
   var id = 'g' + (++CHART_ID), base = H - B;
   var P = vals.map(function (v, i) { return [X(i), Y(v)]; });
   var s = chartOpen(fr, H, lg ? 'lg' : '');
@@ -269,7 +272,7 @@ function lineChart(vals, labels, opt) {
   }
   vals.forEach(function (v, i) {
     var x = P[i][0], y = P[i][1], last = i === n - 1;
-    var hit = opt.target != null && v >= opt.target;
+    var hit = opt.target != null && (inv ? v <= opt.target : v >= opt.target);
     var prev = i > 0 ? P[i - 1][1] : null, next = i < n - 1 ? P[i + 1][1] : null;
     var below = n > 1 && (prev == null || y > prev) && (next == null || y > next) && y < base - 16 * k;
     if (last) s += '<circle class="halo" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (6 * k) + '"/>';

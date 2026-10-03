@@ -70,6 +70,8 @@ var HomeView = (function () {
         ps.appendChild(pb);
         B.appendChild(ps);
       }
+      var gs = ExamView.gradeTrend(exams, { last: 10 });
+      if (gs) B.appendChild(gs);
       B.appendChild(ExamView.wrongTrend(exams.slice(0, 10)));
     }
 

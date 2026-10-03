@@ -13,14 +13,17 @@ var Report = (function () {
       (sub ? '<span class="more">' + sub + '</span>' : '') + '</div>' + body + '</section>';
   }
 
-  /* 차트 2개 (전폭, 크게) */
+  /* 차트 3개: 원점수 · 백분위 · 등급 (전폭, 크게) */
   function charts(chron, s) {
     var cr = chron.filter(function (e) { return e.raw != null; });
     var cp = chron.filter(function (e) { return e.pct != null; });
-    if (!cr.length && !cp.length) return '';
-    return sec('원점수 추이', '<div class="card rp-c">' + lineChart(cr.map(function (e) { return e.raw; }), cr.map(ExamView.shortDate), { size: 'lg' }) + '</div>', cr.length ? cr.length + '회' : '') +
-      sec('백분위 추이', '<div class="card rp-c">' + lineChart(cp.map(function (e) { return e.pct; }), cp.map(ExamView.shortDate), { target: s.targetPct, size: 'lg' }) + '</div>',
-        s.targetPct != null ? '<span class="tg-key"></span>목표 ' + esc(s.targetPct) : '');
+    var cg = chron.filter(function (e) { return e.grade != null; });
+    if (!cr.length && !cp.length && !cg.length) return '';
+    return sec('원점수 추이', '<div class="card rp-c">' + lineChart(cr.map(function (e) { return e.raw; }), cr.map(ExamView.shortDate), { size: 'lg', h: 0.76 }) + '</div>', cr.length ? cr.length + '회' : '') +
+      sec('백분위 추이', '<div class="card rp-c">' + lineChart(cp.map(function (e) { return e.pct; }), cp.map(ExamView.shortDate), { target: s.targetPct, size: 'lg', h: 0.76 }) + '</div>',
+        s.targetPct != null ? '<span class="tg-key"></span>목표 ' + esc(s.targetPct) : '') +
+      (cg.length ? sec('등급 추이', '<div class="card rp-c">' + lineChart(cg.map(function (e) { return e.grade; }), cg.map(ExamView.shortDate), { target: s.targetGrade, invert: true, size: 'lg', h: 0.56 }) + '</div>',
+        s.targetGrade != null ? '<span class="tg-key"></span>목표 ' + esc(s.targetGrade) + '등급' : '') : '');
   }
 
   function header(s, st) {
@@ -52,15 +55,21 @@ var Report = (function () {
     var N = 15, blocks = '';
     var years = {}; chron.forEach(function (e) { years[(e.date || '').slice(0, 4)] = 1; });
     var multiYear = Object.keys(years).length > 1;
-    var dlabel = function (e) { return multiYear ? (e.date || '').slice(2).replace(/\./g, '/') : ExamView.shortDate(e); };
+    /* 해가 바뀌는 칸(과 각 줄 첫 칸)에만 연도를 작게 */
+    var prevY = null;
+    var dlabel = function (e, idx) {
+      var y = (e.date || '').slice(0, 4), show = multiYear && (idx === 0 || y !== prevY);
+      prevY = y;
+      return (show ? '<small class="yr">' + y.slice(2) + '년</small>' : '') + esc(ExamView.shortDate(e));
+    };
     for (var i = 0; i < chron.length; i += N) {
       var part = chron.slice(i, i + N);
       var pad = ''; for (var j = part.length; j < N; j++) pad += '<td></td>';
-      var row = function (k, f) {
-        return '<tr><th>' + k + '</th>' + part.map(function (e) { var v = f(e); return '<td>' + esc(v == null ? '–' : v) + '</td>'; }).join('') + pad + '</tr>';
+      var row = function (k, f, raw) {
+        return '<tr><th>' + k + '</th>' + part.map(function (e, idx) { var v = f(e, idx); return '<td>' + (raw ? v : esc(v == null ? '–' : v)) + '</td>'; }).join('') + pad + '</tr>';
       };
       blocks += '<table class="rp-t rp-row"><tbody>' +
-        row('시행일', dlabel) +
+        row('시행일', dlabel, true) +
         row('원점수', function (e) { return e.raw; }) +
         row('백분위', function (e) { return e.pct; }) +
         row('등급', function (e) { return e.grade; }) +
