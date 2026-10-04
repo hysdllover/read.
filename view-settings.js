@@ -361,25 +361,20 @@ var SettingsView = (function () {
     var steps = h('<div></div>');
     steps.innerHTML = '<ol class="steps">' +
       '<li>앱스토어에서 무료 앱 <b>Scriptable</b> 설치</li>' +
-      '<li><b>스크립트 복사</b> → Scriptable에서 ＋ 눌러 붙여 넣고 한 번 실행 → 토큰 입력 (토큰 복사 버튼)</li>' +
+      '<li><b>스크립트 복사</b> → Scriptable에서 ＋ 눌러 붙여 넣기 (연동 정보가 자동으로 들어가 따로 입력할 것 없음)</li>' +
       '<li>홈 화면(또는 잠금 화면) 길게 누르기 → ＋ → Scriptable 위젯 추가</li>' +
       '<li>위젯 길게 눌러 편집 → Script 선택, <b>Parameter</b>에 위에서 복사한 글 붙여 넣기</li>' +
-      '</ol><div class="t-xs dim" style="margin:6px 0 10px">스크립트 하나로 여러 위젯을 만들 수 있습니다 (위젯마다 Parameter만 다르게). 기기 연동이 켜져 있어야 하고 약 1시간마다 새로 그려집니다.</div>';
+      '</ol><div class="t-xs dim" style="margin:6px 0 10px">스크립트 하나로 여러 위젯을 만들 수 있습니다 (위젯마다 Parameter만 다르게). 기기 연동이 켜져 있어야 하고 약 1시간마다 새로 그려집니다. 복사한 스크립트에는 연동 토큰이 들어 있으니 다른 사람과 공유하지 마세요.</div>';
     cw.appendChild(steps);
-    var wrow = h('<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>');
-    var cpS = h('<button type="button" class="btn">스크립트 복사</button>');
-    var cpT = h('<button type="button" class="btn">토큰 복사</button>');
+    var cpS = h('<button type="button" class="btn full">스크립트 복사</button>');
     cpS.onclick = function () {
       if (!scriptText) { toast('스크립트를 불러오는 중입니다. 잠시 후 다시 눌러 주세요'); return; }
-      copy(scriptText, '스크립트를 복사했습니다');
-    };
-    cpT.onclick = function () {
       var tk = window.Sync && Sync.cfg().token;
-      if (!tk) { toast('먼저 기기 연동을 켜 주세요'); return; }
-      copy(tk, '토큰을 복사했습니다');
+      if (!tk) { toast('먼저 위의 기기 연동(깃허브)을 켜 주세요'); return; }
+      /* 연동 토큰을 스크립트에 넣어서 복사 → Scriptable에서 따로 입력하지 않음 */
+      copy(scriptText.replace('__KOR_DASH_TOKEN__', tk.replace(/[^\w-]/g, '')), '스크립트를 복사했습니다');
     };
-    wrow.appendChild(cpS); wrow.appendChild(cpT);
-    cw.appendChild(wrow);
+    cw.appendChild(cpS);
     cw.appendChild(h('<a class="btn full" style="margin-top:8px" href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener">Scriptable 앱 받기</a>'));
     gw.appendChild(cw);
     root.appendChild(gw);

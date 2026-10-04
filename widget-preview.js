@@ -164,6 +164,7 @@ var WidgetPreview = (function () {
 
   /* src: widget.js 내용, data: 기록, param: 'Parameter 문자열', family: 크기 */
   function render(src, data, param, family) {
+    src = src.replace('__KOR_DASH_TOKEN__', 'preview');   // 미리보기는 실제 연결 없이 앱의 기록으로 그림
     var m = mocks(data, family, param), names = Object.keys(m.env);
     var fn = new Function(names.join(','), '"use strict"; return (async () => {\n' + src + '\n})();');
     return fn.apply(null, names.map(function (k) { return m.env[k]; })).then(function () { return m.out.root; });
