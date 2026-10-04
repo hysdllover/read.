@@ -1,11 +1,11 @@
-/* core.js — 저장소 + 코드 로그인 + 라우터
-   ※ 기록은 코드별로 따로 저장됩니다. (kor-dash:d0 ~ kor-dash:d9)
+/* core.js — 저장소 + 라우터
+   ※ 기록은 kor-dash:d<칸>에 저장됩니다. (예전 코드 기능의 칸 번호를 그대로 사용)
    ※ 필드를 추가할 땐 DEFAULTS()와 migrate()만 손보면 기존 기록이 유지됩니다. */
 'use strict';
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v12';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v13';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -205,33 +205,22 @@ function timeAgo(ts) {
   return Math.round(m / 1440) + '일 전';
 }
 
-/* ---- 로그인 화면 ---- */
-function showGate() {
-  var old = document.getElementById('gate');
-  if (old) old.remove();
-  var g = document.createElement('div');
-  g.id = 'gate';
-  g.innerHTML = '<div class="gate-h"><div class="eyebrow">수능 국어</div>' +
-    '<div class="gate-t">코드를 눌러 시작</div>' +
-    '<div class="gate-s">코드마다 기록이 따로 저장됩니다</div></div>';
-  var keys = document.createElement('div');
-  keys.className = 'keys';
+/* ---- 저장 칸 고르기 ----
+   예전에는 0~9 코드로 기록을 나눴지만 이제는 하나만 씁니다.
+   마지막으로 쓰던 칸 → 없으면 가장 최근에 저장된 칸 → 없으면 0 */
+function pickCode() {
+  var saved = LS.getItem(APP_KEY + ':code');
+  if (saved !== null && saved !== '' && LS.getItem(APP_KEY + ':d' + saved)) return saved;
+  var best = null, bt = -1;
   for (var i = 0; i <= 9; i++) {
-    (function (n) {
-      var has = !!LS.getItem(APP_KEY + ':d' + n);
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'key';
-      b.innerHTML = '<span>' + n + '</span>' + (has ? '<span class="has"></span>' : '<span class="has" style="opacity:0"></span>');
-      b.onclick = function () { App.login(String(n)); };
-      keys.appendChild(b);
-    })(i);
+    try {
+      var raw = LS.getItem(APP_KEY + ':d' + i);
+      if (!raw) continue;
+      var t = JSON.parse(raw).t || 0;
+      if (t > bt) { bt = t; best = String(i); }
+    } catch (e) { }
   }
-  g.appendChild(keys);
-  document.body.appendChild(g);
-  document.getElementById('main').hidden = true;
-  document.getElementById('topbar').hidden = true;
-  document.getElementById('tabbar').hidden = true;
+  return best || (saved !== null && saved !== '' ? saved : '0');
 }
 
 /* ---- 테마 색상 (설정에 저장, 기기 연동) ---- */
@@ -343,19 +332,10 @@ var App = {
     CODE = String(code);
     LS.setItem(APP_KEY + ':code', CODE);
     Store.load();
-    var g = document.getElementById('gate'); if (g) g.remove();
-    document.getElementById('main').hidden = false;
-    document.getElementById('topbar').hidden = false;
-    document.getElementById('tabbar').hidden = false;
     this.dday();
     this.route = this.views[0].id;
     this.refresh();
     if (window.Sync) Sync.run(false);
-  },
-  logout: function () {
-    LS.removeItem(APP_KEY + ':code');
-    CODE = null;
-    showGate();
   },
   /* 글꼴 · 크기 · 굵기 (기기별 저장). 기본: 작고 얇게 */
   FONTS: {
@@ -451,9 +431,7 @@ var App = {
     this.buildTabs();
     var self = this;
     document.getElementById('btnSet').onclick = function () { self.go(self.route === 'settings' ? self.views[0].id : 'settings'); };
-    var saved = LS.getItem(APP_KEY + ':code');
-    if (saved !== null && saved !== '') this.login(saved);
-    else showGate();
+    this.login(pickCode());
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden && CODE !== null && window.Sync) Sync.run(false);
     });

@@ -28,7 +28,7 @@ var Report = (function () {
 
   function header(s, st) {
     return '<header class="rp-h"><div><div class="eyebrow">수능 국어 · 성적 추이</div>' +
-      '<h1>코드 ' + esc(CODE) + '</h1></div><div class="rp-meta">출력 ' + esc(today()) +
+      '<h1>국어 성적</h1></div><div class="rp-meta">출력 ' + esc(today()) +
       (st.dday != null && st.dday >= 0 ? ' · 수능 D-' + st.dday : '') + '<br>목표 ' +
       (s.targetGrade != null ? esc(s.targetGrade) + '등급' : '–') + ' · 백분위 ' + (s.targetPct != null ? esc(s.targetPct) : '–') +
       '</div></header>';
