@@ -108,7 +108,7 @@ var SettingsView = (function () {
     var c4 = h('<div class="card"></div>');
     if (Sync.on()) {
       c4.innerHTML = '<div class="t-s muted" style="margin-bottom:10px">' +
-        esc(cfg.user || 'GitHub') + ' · 마지막 동기화 ' + esc(timeAgo(cfg.last)) +
+        esc(cfg.user || 'GitHub') + ' · 마지막 동기화 <span data-sync-state>' + esc(timeAgo(cfg.last)) + '</span>' +
         (Sync.state ? ' · ' + esc(Sync.state) : '') + '</div>';
       var now = h('<button type="button" class="btn full" style="margin-bottom:8px">지금 동기화</button>');
       now.onclick = function () { Sync.run(true); };

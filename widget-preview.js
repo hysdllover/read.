@@ -97,7 +97,7 @@ var WidgetPreview = (function () {
         setPadding: function (t, l, b, r) { el.style.padding = t + 'px ' + r + 'px ' + b + 'px ' + l + 'px'; },
         addText: function (s) {
           var sp = document.createElement('div'); sp.textContent = s;
-          sp.style.whiteSpace = 'pre-wrap'; sp.style.lineHeight = '1.2'; sp.style.wordBreak = 'keep-all'; sp.style.overflowWrap = 'anywhere';
+          sp.style.flexShrink = '0'; sp.style.whiteSpace = 'pre-wrap'; sp.style.lineHeight = '1.2'; sp.style.wordBreak = 'keep-all'; sp.style.overflowWrap = 'anywhere';
           el.appendChild(sp);
           var o = {};
           Object.defineProperty(o, 'font', { set: function (f) { sp.style.font = f.css; sp.style.lineHeight = '1.2'; } });
@@ -114,9 +114,9 @@ var WidgetPreview = (function () {
           d.style.flex = n == null ? '1 1 0' : '0 0 ' + n + 'px';
           el.appendChild(d);
         },
-        addStack: function () { var d = document.createElement('div'); if (!(el.dataset.center && el.style.flexDirection === 'column')) d.style.alignSelf = 'stretch'; el.appendChild(d); return makeStack(d, false); },
+        addStack: function () { var d = document.createElement('div'); d.style.flexShrink = '0'; if (!(el.dataset.center && el.style.flexDirection === 'column')) d.style.alignSelf = 'stretch'; el.appendChild(d); return makeStack(d, false); },
         addImage: function (c) {
-          el.appendChild(c); c.style.display = 'block';
+          el.appendChild(c); c.style.display = 'block'; c.style.flexShrink = '0';
           var o = {};
           Object.defineProperty(o, 'imageSize', { set: function (s) { c.style.width = s.width + 'px'; c.style.height = s.height + 'px'; c.style.maxWidth = '100%'; c.style.objectFit = 'contain'; } });
           o.centerAlignImage = function () { c.style.alignSelf = 'center'; };
@@ -140,6 +140,7 @@ var WidgetPreview = (function () {
       d.style.color = '#fff';
       var st = makeStack(d, true);
       if (family === 'accessoryCircular') { d.style.alignItems = 'center'; d.style.justifyContent = 'center'; }
+      Object.defineProperty(st, 'backgroundGradient', { set: function (g) { d.style.background = 'linear-gradient(180deg,' + g.colors.map(function (c) { return c.css; }).join(',') + ')'; } });
       Object.defineProperty(st, 'url', { set: function () { } });
       Object.defineProperty(st, 'refreshAfterDate', { set: function () { } });
       Object.defineProperty(st, 'addAccessoryWidgetBackground', { set: function (v) { if (v) d.style.background = 'rgba(255,255,255,.18)'; } });
@@ -156,6 +157,7 @@ var WidgetPreview = (function () {
     return {
       out: out,
       env: {
+        LinearGradient: function () { this.colors = []; this.locations = []; },
         Font: Font, Color: Color, Size: Size, Rect: Rect, Point: Point, Path: Path, DrawContext: DrawContext,
         ListWidget: ListWidget, Request: Request,
         Keychain: { contains: function () { return true; }, get: function () { return 'preview'; }, set: function () { } },
@@ -183,11 +185,12 @@ var WidgetPreview = (function () {
    위젯 구성은 settings.widgets에 저장 → 기기 연동으로 Scriptable 위젯이 읽어 감 */
 var WidgetBuilder = (function () {
   var OPTS = {
-    kind: [['추이 그래프', 'trend'], ['큰 숫자', 'number'], ['요약', 'summary'], ['목표 달성', 'goal'], ['최근 기록', 'recent'], ['영역별 오답', 'wrong'], ['약점 제재', 'weak'], ['행동강령', 'rule']],
+    kind: [['직접 구성', 'custom'], ['추이 그래프', 'trend'], ['큰 숫자', 'number'], ['요약', 'summary'], ['목표 달성', 'goal'], ['최근 기록', 'recent'], ['영역별 오답', 'wrong'], ['약점 제재', 'weak'], ['행동강령', 'rule']],
     metric: [['등급', 'grade'], ['백분위', 'pct'], ['원점수', 'raw'], ['오답 합계', 'wrong'], ['독서 오답', 'w독서'], ['문학 오답', 'w문학'], ['선택 오답', 'w선택']],
     count: [['5회', 5], ['8회', 8], ['10회', 10], ['15회', 15], ['20회', 20], ['전체', 0]],
     shape: [['곡선', 'curve'], ['직선', 'line'], ['막대', 'bar'], ['점', 'dot']],
-    style: [['기본', 'card'], ['배경', 'bg'], ['다크', 'dark'], ['컬러', 'color'], ['종이', 'paper'], ['파스텔', 'pastel']],
+    style: [['기본', 'card'], ['배경', 'bg'], ['다크', 'dark'], ['컬러', 'color'], ['종이', 'paper'], ['파스텔', 'pastel'], ['직접', 'custom']],
+    pad: [['좁게', 'tight'], ['보통', 'normal'], ['넓게', 'wide']],
     align: [['왼쪽', 'left'], ['가운데', 'center']],
     textFont: [['시스템', 'sys'], ['둥근', 'round'], ['얇은 고딕', 'sdlight'], ['가는 고딕', 'sdthin'], ['명조', 'myungjo'], ['모노', 'mono']],
     numFont: [['시스템', 'sys'], ['둥근', 'round'], ['모노', 'mono'], ['헬베티카', 'helv'], ['아베니르', 'avenir'], ['디도', 'didot'], ['퓨추라', 'futura'], ['조지아', 'georgia'], ['옵티마', 'optima'], ['길 산스', 'gill']],
@@ -197,16 +200,61 @@ var WidgetBuilder = (function () {
   var SHOW = [['제목', 'title'], ['최근 값', 'value'], ['변화', 'delta'], ['목표', 'target'], ['점수', 'labels'], ['날짜', 'dates'], ['통계', 'stats'], ['시험명', 'exam']];
   var GROUPS = [
     ['kind', '종류', 'all'], ['metric', '지표', 'trend number summary goal'], ['count', '기록 수', 'trend number summary goal wrong recent'],
-    ['shape', '그래프 모양', 'trend number summary goal'], ['style', '디자인', 'all'], ['align', '정렬', 'number goal rule'],
+    ['shape', '그래프 모양', 'trend number summary goal'], ['style', '디자인', 'all'], ['pad', '여백', 'all'], ['align', '정렬', 'number goal rule'],
     ['textFont', '한글 글꼴', 'all'], ['numFont', '숫자 글꼴', 'all'], ['weight', '숫자 굵기', 'all'], ['scale', '글자 크기', 'all']
   ];
   var DEF = {
     kind: 'trend', metric: 'grade', count: 10, shape: 'curve', style: 'card', align: 'left',
-    textFont: 'sys', numFont: 'sys', weight: 'light', scale: 1,
+    textFont: 'sys', numFont: 'sys', weight: 'light', scale: 1, pad: 'normal',
     show: { title: true, value: true, delta: true, target: true, labels: true, dates: true, stats: true, exam: true }
   };
   var SIZE_KEY = { '작게': 'small', '중간': 'medium', '크게': 'large', '잠금 원형': 'accessoryCircular', '잠금 사각': 'accessoryRectangular', '잠금 한 줄': 'accessoryInline' };
   var sel = 0, size = '중간', scriptText = '';
+
+  /* 구성요소 종류와 옵션 */
+  var MET = [['등급', 'grade'], ['백분위', 'pct'], ['원점수', 'raw'], ['오답 합계', 'wrong'], ['독서 오답', 'w독서'], ['문학 오답', 'w문학'], ['선택 오답', 'w선택']];
+  var SML = [['작게', 's'], ['보통', 'm'], ['크게', 'l']];
+  var FIELD = {
+    text: { type: 'text', l: '글', ph: '예: 오늘도 한 지문 더' },
+    metric: { l: '지표', o: MET, def: 'pct' },
+    size: { l: '크기', o: SML, def: 'm' },
+    h: { l: '높이', o: [['낮게', 's'], ['보통', 'm'], ['높게', 'l']], def: 'm' },
+    shape: { l: '모양', o: [['곡선', 'curve'], ['직선', 'line'], ['막대', 'bar'], ['점', 'dot']], def: 'curve' },
+    count: { l: '기록 수', o: [['5회', 5], ['8회', 8], ['10회', 10], ['15회', 15], ['20회', 20], ['전체', 0]], def: 10 },
+    n: { l: '개수', o: [['2', 2], ['3', 3], ['4', 4], ['5', 5], ['6', 6], ['8', 8]], def: 3 },
+    lines: { l: '최대 줄 수', o: [['2', 2], ['3', 3], ['4', 4], ['6', 6], ['8', 8], ['12', 12]], def: 4 },
+    align: { l: '정렬', o: [['왼쪽', 'left'], ['가운데', 'center']], def: 'left' },
+    color: { l: '글자색', o: [['연하게', 'sub'], ['진하게', 'text'], ['강조색', 'accent'], ['포인트', 'hl']], def: 'sub' },
+    keys: { type: 'multi', l: '보여줄 숫자', o: [['원점수', 'raw'], ['백분위', 'pct'], ['등급', 'grade'], ['오답 합계', 'wrong']], def: ['raw', 'pct', 'grade'] }
+  };
+  var TOG = {
+    label: ['이름 표시', true], delta: ['변화 ▲▼', true], target: ['목표', true], labels: ['점수', true],
+    dates: ['날짜', true], exam: ['시험명', true], bold: ['굵게', false], flex: ['남은 공간 채우기', false]
+  };
+  var BT = {
+    title: { n: '제목', d: '직접 쓴 제목', f: ['text', 'size', 'color', 'align'], tg: ['bold'], def: { text: '국어 성적' } },
+    big: { n: '큰 숫자', d: '최근 값 하나를 크게', f: ['metric', 'size', 'align'], tg: ['label', 'delta', 'target'], def: { metric: 'pct' } },
+    chart: { n: '그래프', d: '추이 그래프', f: ['metric', 'shape', 'h', 'count'], tg: ['labels', 'dates', 'target'], def: { metric: 'grade', h: 'm' } },
+    tiles: { n: '숫자 줄', d: '원점수·백분위·등급을 나란히', f: ['keys', 'size'], tg: ['delta'], def: {} },
+    ring: { n: '목표 고리', d: '목표 달성률', f: ['metric', 'size', 'align'], tg: [], def: { metric: 'pct' } },
+    recent: { n: '최근 기록', d: '최근 시험 몇 줄', f: ['n'], tg: ['exam'], def: { n: 3 } },
+    wrong: { n: '영역별 오답', d: '독서·문학·선택 막대', f: ['h', 'count'], tg: ['labels', 'dates'], def: { h: 'm' } },
+    weak: { n: '약점 제재', d: '오답률 높은 제재', f: ['n'], tg: [], def: { n: 3 } },
+    rule: { n: '행동강령', d: '최근 행동강령', f: ['size', 'lines', 'align'], tg: [], def: { lines: 4 } },
+    note: { n: '문구', d: '내가 쓴 한마디', f: ['text', 'size', 'color', 'align'], tg: ['bold'], def: { text: '', color: 'hl' } },
+    line: { n: '구분선', d: '가는 선', f: [], tg: [], def: {} },
+    gap: { n: '여백', d: '띄우기 · 아래로 밀기', f: ['size'], tg: ['flex'], def: { size: 'm' } }
+  };
+  function blockSummary(b) {
+    var p = [];
+    if (b.text) p.push('“' + b.text.slice(0, 14) + '”');
+    if (b.metric) p.push((MET.find(function (x) { return x[1] === b.metric; }) || ['', ''])[0]);
+    if (b.shape) p.push(FIELD.shape.o.find(function (x) { return x[1] === b.shape; })[0]);
+    if (b.keys) p.push(b.keys.length + '개');
+    if (b.n) p.push(b.n + '개');
+    if (b.flex) p.push('채우기');
+    return p.join(' · ');
+  }
 
   function labelOf(key, v) { var o = OPTS[key].find(function (x) { return x[1] === v; }); return o ? o[0] : OPTS[key][0][0]; }
   function valueOf(key, l) { var o = OPTS[key].find(function (x) { return x[0] === l; }); return o ? o[1] : OPTS[key][0][1]; }
@@ -286,7 +334,7 @@ var WidgetBuilder = (function () {
     box.appendChild(tools);
 
     /* 미리보기 */
-    var stage = h('<div class="wp-stage"><div class="t-xs dim">미리보기를 준비하는 중…</div></div>');
+    var stage = h('<div class="wp-stage wb-sticky"><div class="t-xs dim">미리보기를 준비하는 중…</div></div>');
     box.appendChild(stage);
     var sz = form(fSeg('미리보기 크기', 'wsize', Object.keys(SIZE_KEY), size));
     bindForm(sz);
@@ -298,13 +346,16 @@ var WidgetBuilder = (function () {
     GROUPS.forEach(function (g) {
       html += '<div data-for="' + g[2] + '">' + fSeg(g[1], g[0], OPTS[g[0]].map(function (x) { return x[0]; }), labelOf(g[0], cfg[g[0]])) + '</div>';
     });
-    html += fChips('표시 항목', 'show', SHOW.map(function (x) { return x[0]; }), SHOW.filter(function (x) { return cfg.show[x[1]]; }).map(function (x) { return x[0]; }));
+    html += '<div data-for="trend number summary goal recent wrong weak rule">' + fChips('표시 항목', 'show', SHOW.map(function (x) { return x[0]; }), SHOW.filter(function (x) { return cfg.show[x[1]]; }).map(function (x) { return x[0]; })) + '</div>';
     var f = form(html);
     bindForm(f);
+    var designBox, blockBox;
     function vis() {
       f.querySelectorAll('[data-for]').forEach(function (d) {
         var t = d.dataset.for; d.hidden = !(t === 'all' || t.split(' ').indexOf(cfg.kind) >= 0);
       });
+      if (designBox) designBox.hidden = cfg.style !== 'custom';
+      if (blockBox) { blockBox.hidden = cfg.kind !== 'custom'; if (!blockBox.hidden && !blockBox.firstChild) drawBlocks(); }
     }
     GROUPS.forEach(function (g) {
       f.querySelector('[data-seg="' + g[0] + '"]').addEventListener('pick', function (e) {
@@ -316,8 +367,91 @@ var WidgetBuilder = (function () {
       SHOW.forEach(function (x) { cfg.show[x[1]] = on.indexOf(x[0]) >= 0; });
       save(); draw();
     });
-    vis();
     box.appendChild(f);
+
+    /* 직접 디자인: 색 · 그라데이션 */
+    designBox = h('<div class="wb-sub"><div class="wb-h">직접 디자인</div><div class="th-rows"></div></div>');
+    var th = (typeof currentTheme === 'function') ? currentTheme() : {};
+    cfg.design = Object.assign({ bg: th.card || '#ffffff', bg2: th.bg || '#f5f5f7', grad: false, text: th.text || '#1f2023', accent: th.accent || '#5b6b85', good: th.good || '#7a8465', bad: th.bad || '#a8868a', hl: th.hl || '#8f8aae' }, cfg.design || {});
+    var rowsEl = designBox.querySelector('.th-rows');
+    [['bg', '배경'], ['bg2', '아래쪽 색 (그라데이션)'], ['text', '글자'], ['accent', '그래프 · 강조'], ['good', '달성 · 오름'], ['bad', '미달 · 내림'], ['hl', '포인트']].forEach(function (kv) {
+      var r = h('<label class="th-row"><span>' + kv[1] + '</span><input type="color" value="' + esc(cfg.design[kv[0]]) + '"></label>');
+      var inp = r.querySelector('input');
+      inp.addEventListener('input', function () { cfg.design[kv[0]] = inp.value; if (kv[0] === 'bg2') { cfg.design.grad = true; gchk.checked = true; } draw(); });
+      inp.addEventListener('change', function () { save(); });
+      rowsEl.appendChild(r);
+    });
+    var gl = h('<label class="th-row"><span>그라데이션 배경</span><input type="checkbox" class="wb-chk"></label>');
+    var gchk = gl.querySelector('input'); gchk.checked = !!cfg.design.grad;
+    gchk.onchange = function () { cfg.design.grad = gchk.checked; save(); draw(); };
+    rowsEl.appendChild(gl);
+    box.appendChild(designBox);
+
+    /* 직접 구성: 구성요소 목록 */
+    blockBox = h('<div class="wb-sub"></div>');
+    if (!Array.isArray(cfg.blocks) || !cfg.blocks.length) cfg.blocks = [{ t: 'title', text: '국어 성적' }, { t: 'big', metric: 'pct' }, { t: 'chart', metric: 'grade', h: 'm' }];
+    function drawBlocks() {
+      blockBox.innerHTML = '<div class="wb-h">구성요소 <span class="t-xs dim">위에서부터 차례로 쌓입니다</span></div>';
+      cfg.blocks.forEach(function (b, i) {
+        var meta = BT[b.t] || { n: b.t };
+        var r = h('<div class="wb-block"><div class="wb-bn"><b>' + esc(meta.n) + '</b><span class="t-xs dim">' + esc(blockSummary(b)) + '</span></div>' +
+          '<button type="button" data-a="up" aria-label="위로">↑</button><button type="button" data-a="down" aria-label="아래로">↓</button>' +
+          '<button type="button" data-a="edit">편집</button><button type="button" data-a="del" aria-label="삭제">✕</button></div>');
+        r.querySelector('[data-a=up]').onclick = function () { if (!i) return; var t = cfg.blocks[i - 1]; cfg.blocks[i - 1] = b; cfg.blocks[i] = t; save(); drawBlocks(); draw(); };
+        r.querySelector('[data-a=down]').onclick = function () { if (i === cfg.blocks.length - 1) return; var t = cfg.blocks[i + 1]; cfg.blocks[i + 1] = b; cfg.blocks[i] = t; save(); drawBlocks(); draw(); };
+        r.querySelector('[data-a=edit]').onclick = function () { editBlock(b); };
+        r.querySelector('[data-a=del]').onclick = function () { cfg.blocks.splice(i, 1); save(); drawBlocks(); draw(); };
+        blockBox.appendChild(r);
+      });
+      var addB = h('<button type="button" class="btn full" style="margin-top:8px">＋ 구성요소 추가</button>');
+      addB.onclick = function () {
+        var body = h('<div class="wb-types"></div>');
+        var sheet;
+        Object.keys(BT).forEach(function (k) {
+          var bt = h('<button type="button" class="btn"><b>' + esc(BT[k].n) + '</b><span class="t-xs dim">' + esc(BT[k].d) + '</span></button>');
+          bt.onclick = function () {
+            sheet.close();
+            var nb = Object.assign({ t: k }, BT[k].def || {});
+            cfg.blocks.push(nb); save(); drawBlocks(); draw();
+            if ((BT[k].f || []).length || (BT[k].tg || []).length) editBlock(nb);
+          };
+          body.appendChild(bt);
+        });
+        sheet = openSheet({ title: '구성요소 추가', body: body, okLabel: '닫기' });
+      };
+      blockBox.appendChild(addB);
+    }
+    function editBlock(b) {
+      var meta = BT[b.t];
+      var html2 = '';
+      (meta.f || []).forEach(function (k) {
+        var F = FIELD[k];
+        if (F.type === 'text') html2 += fText(F.l, k, b[k] || '', F.ph || '');
+        else if (F.type === 'multi') html2 += fChips(F.l, k, F.o.map(function (x) { return x[0]; }), F.o.filter(function (x) { return (b[k] || F.def).indexOf(x[1]) >= 0; }).map(function (x) { return x[0]; }));
+        else html2 += fSeg(F.l, k, F.o.map(function (x) { return x[0]; }), (F.o.find(function (x) { return x[1] === (b[k] == null ? F.def : b[k]); }) || F.o[0])[0]);
+      });
+      if ((meta.tg || []).length) {
+        html2 += fChips('켜고 끄기', '_tg', meta.tg.map(function (k) { return TOG[k][0]; }), meta.tg.filter(function (k) { return b[k] == null ? TOG[k][1] : b[k]; }).map(function (k) { return TOG[k][0]; }));
+      }
+      var bf = form(html2);
+      bindForm(bf);
+      openSheet({
+        title: meta.n + ' 설정', body: bf,
+        onOk: function () {
+          var v = readForm(bf);
+          (meta.f || []).forEach(function (k) {
+            var F = FIELD[k];
+            if (F.type === 'text') b[k] = v[k];
+            else if (F.type === 'multi') b[k] = F.o.filter(function (x) { return (v[k] || []).indexOf(x[0]) >= 0; }).map(function (x) { return x[1]; });
+            else { var o = F.o.find(function (x) { return x[0] === v[k]; }); if (o) b[k] = o[1]; }
+          });
+          (meta.tg || []).forEach(function (k) { b[k] = (v._tg || []).indexOf(TOG[k][0]) >= 0; });
+          save(); drawBlocks(); draw();
+        }
+      });
+    }
+    box.appendChild(blockBox);
+    vis();
 
     /* Parameter · 스크립트 */
     var prm = h('<div class="wp-param"><span class="t-xs dim">Parameter</span><b></b><button type="button" class="btn">복사</button></div>');
@@ -331,11 +465,14 @@ var WidgetBuilder = (function () {
       WidgetPreview.render(scriptText, Store.data, cfg.name, fam).then(function (el) {
         stage.innerHTML = '';
         stage.classList.toggle('lock', fam.indexOf('accessory') === 0);
-        var s2 = WidgetPreview.SIZES[fam], room = stage.clientWidth - 24, k = Math.min(1, room / s2[0]);
+        /* 편집하는 동안 위에 붙어 따라오므로 높이도 제한 */
+        var s2 = WidgetPreview.SIZES[fam], room = stage.clientWidth - 24, k = Math.min(1, room / s2[0], (window.innerWidth < 700 ? 190 : 300) / s2[1]);
         var holder = h('<div style="width:' + s2[0] * k + 'px;height:' + s2[1] * k + 'px"></div>');
         el.style.transform = 'scale(' + k + ')'; el.style.transformOrigin = '0 0';
         holder.appendChild(el);
         stage.appendChild(holder);
+        /* 내용이 위젯 크기를 넘으면 알려 줌 */
+        if (el.scrollHeight > el.clientHeight + 2) stage.appendChild(h('<div class="wp-over">아래가 잘립니다 · 구성요소를 줄이거나 더 큰 크기로</div>'));
       }).catch(function (e) { stage.innerHTML = '<div class="t-xs dim">미리보기를 그릴 수 없습니다 (' + esc(e.message || e) + ')</div>'; });
     }
     if (scriptText) draw();

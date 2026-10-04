@@ -125,7 +125,9 @@ var Sync = {
     this.paint();
     return this.ensureGist().then(function (gid) {
       return self.pull(gid).then(function (remote) {
+        var before = JSON.stringify(Store.data);
         var merged = remote ? mergeData(Store.data, remote) : Store.data;
+        self.pulledNew = before !== JSON.stringify(merged);
         var changed = !remote || JSON.stringify(remote) !== JSON.stringify(merged);
         Store.data = merged;
         Store.save(true);
@@ -136,7 +138,9 @@ var Sync = {
       var c = self.cfg(); c.last = Date.now(); self.setCfg(c);
       self.busy = false; self.state = '';
       self.paint();
-      if (App.route === 'settings' || manual || self.switched) { self.switched = false; App.dday(); App.refresh(); }
+      /* 다른 기기에서 받은 변경이 있을 때만 다시 그림 (설정 중 화면이 튀지 않게) */
+      if (manual || self.switched || self.pulledNew) { self.switched = false; self.pulledNew = false; App.dday(); App.refresh(); }
+      else if (App.route === 'settings') { var st = document.querySelector('[data-sync-state]'); if (st) st.textContent = '방금'; }
       if (manual) toast('동기화 완료');
     }).catch(function (e) {
       self.busy = false; self.state = e.message || '동기화 실패';
