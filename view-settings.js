@@ -156,7 +156,7 @@ var SettingsView = (function () {
       var b = h('<button type="button" class="th-p"><i>' + ['accent', 'good', 'bad', 'hl'].map(function (k) {
         return '<b style="background:' + t[k] + '"></b>';
       }).join('') + '</i>' + esc(name) + '</button>');
-      b.onclick = function () { var y = window.scrollY; saveTheme(Object.assign({}, presets[name])); App.refresh(); window.scrollTo(0, y); toast(name + ' 적용'); };
+      b.onclick = function () { var y = window.scrollY; saveTheme(Object.assign({}, presets[name], { paper: presets[name].paper != null ? presets[name].paper : (+currentTheme().paper || 0) })); App.refresh(); window.scrollTo(0, y); toast(name + ' 적용'); };
       pw.appendChild(b);
     });
     c9.appendChild(pw);
@@ -170,6 +170,13 @@ var SettingsView = (function () {
       rows.appendChild(r);
     });
     c9.appendChild(rows);
+    var pf = form(fSeg('종이 질감', 'paper', ['끔', '약하게', '보통', '진하게'], ['끔', '약하게', '보통', '진하게'][+cur.paper || 0]));
+    bindForm(pf);
+    pf.querySelector('[data-seg=paper]').addEventListener('pick', function (e) {
+      cur.paper = ['끔', '약하게', '보통', '진하게'].indexOf(e.detail); saveTheme(cur);
+    });
+    pf.style.marginTop = '12px';
+    c9.appendChild(pf);
     var th0 = h('<button type="button" class="btn full" style="margin-top:12px">기본 테마로</button>');
     th0.onclick = function () { var y = window.scrollY; delete Store.data.settings.theme; Store.touchSettings(); App.refresh(); window.scrollTo(0, y); };
     c9.appendChild(th0);

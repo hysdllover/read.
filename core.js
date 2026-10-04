@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v21';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v22';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -235,6 +235,7 @@ var THEME_PRESETS = {
   '세이지': { accent: '#6e8c8a', good: '#7a8465', bad: '#99857a', hl: '#8085a0', bg: '#f3f5f3', card: '#ffffff', text: '#202422' },
   '로즈': { accent: '#8f7782', good: '#7f8a6a', bad: '#a07070', hl: '#8f8aae', bg: '#f8f5f5', card: '#ffffff', text: '#2a2325' },
   '샌드': { accent: '#857d66', good: '#7a8465', bad: '#a08a8a', hl: '#8085a0', bg: '#f6f5f1', card: '#fffefb', text: '#26251f' },
+  '종이': { accent: '#5f6676', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#efe9dc', card: '#f8f4ea', text: '#2f2b25', paper: 2 },
   '나이트': { accent: '#8fa0bd', good: '#9aa883', bad: '#c39ca0', hl: '#aaa5c8', bg: '#1b1f27', card: '#242933', text: '#e4e6ec' }
 };
 function hexRgb(h) { h = String(h || '').replace('#', ''); if (h.length === 3) h = h.replace(/./g, '$&$&'); var n = parseInt(h, 16) || 0; return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
@@ -274,6 +275,22 @@ function applyTheme(t) {
   set('--bar', 'rgba(' + bc.join(',') + ',.92)'); set('--tab', 'rgba(' + cc.join(',') + ',.94)');
   set('--on-t1', t.card);
   var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.bg;
+  /* 종이 질감: 파일 없이 SVG 잡음으로 그림 (0 끔 · 1 약하게 · 2 보통 · 3 진하게) */
+  var lv = +t.paper || 0;
+  set('--paper', lv ? paperTex(lv, dark, 1) : 'none');
+  set('--paper-card', lv ? paperTex(lv, dark, 0.6) : 'none');
+  document.documentElement.classList.toggle('paper', !!lv);
+}
+function paperTex(lv, dark, k) {
+  var a = [0, 0.05, 0.09, 0.14][lv] * k, b = [0, 0.035, 0.06, 0.09][lv] * k;
+  var c = dark ? '1 1 1' : '0.36 0.31 0.24';
+  var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'>" +
+    "<filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/>" +
+    "<feColorMatrix values='0 0 0 0 " + c.split(' ')[0] + " 0 0 0 0 " + c.split(' ')[1] + " 0 0 0 0 " + c.split(' ')[2] + " 0 0 0 " + a.toFixed(3) + " 0'/></filter>" +
+    "<filter id='f'><feTurbulence type='fractalNoise' baseFrequency='.012 .09' numOctaves='2' seed='7' stitchTiles='stitch'/>" +
+    "<feColorMatrix values='0 0 0 0 " + c.split(' ')[0] + " 0 0 0 0 " + c.split(' ')[1] + " 0 0 0 0 " + c.split(' ')[2] + " 0 0 0 " + (b * 1.6).toFixed(3) + " -" + (b * 0.4).toFixed(3) + "'/></filter>" +
+    "<rect width='100%' height='100%' filter='url(#f)'/><rect width='100%' height='100%' filter='url(#g)'/></svg>";
+  return 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '")';
 }
 
 /* ---- 라우터 ---- */

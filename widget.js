@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 21;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 22;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -309,6 +309,31 @@ function ringImg(frac, D, P, lw) {
       if (i === 0) p.move(q); else p.addLine(q);
     }
     dc.setStrokeColor(C(P.good)); dc.setLineWidth(lw); dc.addPath(p); dc.strokePath();
+  }
+  return dc.getImage();
+}
+
+// ---------- 종이 질감 배경 (점·섬유를 직접 그림, 매번 같은 무늬) ----------
+function paperImg(W, H, bg, bg2, lv) {
+  const dc = new DrawContext();
+  dc.size = new Size(W, H); dc.opaque = true; dc.respectScreenScale = true;
+  if (bg2) {
+    for (let i = 0; i < 48; i++) { dc.setFillColor(C(mix(bg, bg2, i / 47))); dc.fillRect(new Rect(0, H * i / 48, W, H / 48 + 1)); }
+  } else { dc.setFillColor(C(bg)); dc.fillRect(new Rect(0, 0, W, H)); }
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const dark = rgb(bg).reduce((a, v) => a + v, 0) < 384, ink = dark ? '#ffffff' : '#5a4f3c';
+  const k = [0, 0.6, 1, 1.5][lv] || 1;
+  for (let i = 0; i < W * H / 9; i++) {   // 잔 알갱이
+    dc.setFillColor(C(rnd() < 0.5 ? ink : (dark ? '#000000' : '#ffffff'), (0.025 + rnd() * 0.05) * k));
+    const s = rnd() < 0.85 ? 0.6 : 1.2;
+    dc.fillRect(new Rect(rnd() * W, rnd() * H, s, s));
+  }
+  dc.setLineWidth(0.4);
+  for (let i = 0; i < W * H / 900; i++) {   // 섬유
+    const x = rnd() * W, y = rnd() * H, len = 3 + rnd() * 9, a = rnd() * Math.PI;
+    const p = new Path(); p.move(new Point(x, y)); p.addLine(new Point(x + Math.cos(a) * len, y + Math.sin(a) * len));
+    dc.setStrokeColor(C(ink, 0.05 * k)); dc.addPath(p); dc.strokePath();
   }
   return dc.getImage();
 }
@@ -834,6 +859,10 @@ async function build(param) {
     g.colors = [C(ctx.P.bg), C(cfg.design.bg2)];
     g.locations = [0, 1];
     w.backgroundGradient = g;
+  }
+  if (cfg.texture) {
+    const box = widgetBox(fam), grad = cfg.style === 'custom' && cfg.design && cfg.design.grad && cfg.design.bg2;
+    w.backgroundImage = paperImg(box[0], box[1], ctx.P.bg, grad ? cfg.design.bg2 : null, +cfg.texture || 2);
   }
   const pd = { tight: [9, 11], normal: [13, 15], wide: [18, 20] }[cfg.pad] || [13, 15];
   w.setPadding(pd[0], pd[1], pd[0] - 2, pd[1]);
