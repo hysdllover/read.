@@ -308,7 +308,7 @@ var SettingsView = (function () {
     var wopt = { type: '등급', style: '기본', face: '고딕', size: '중간' };
     var SIZE_KEY = { '작게': 'small', '중간': 'medium', '크게': 'large', '잠금 원형': 'accessoryCircular', '잠금 사각': 'accessoryRectangular', '잠금 한 줄': 'accessoryInline' };
     var wf = form(
-      fSeg('종류', 'wtype', ['등급', '백분위', '원점수', '디데이', '행동강령', '요약', '오답'], wopt.type) +
+      fSeg('종류', 'wtype', ['등급', '백분위', '원점수', '행동강령', '요약', '오답'], wopt.type) +
       fSeg('디자인', 'wstyle', ['기본', '배경', '다크', '컬러'], wopt.style) +
       fSeg('글꼴', 'wface', ['고딕', '얇게', '둥근', '명조', '모노'], wopt.face) +
       fSeg('크기 (미리보기)', 'wsize', Object.keys(SIZE_KEY), wopt.size)

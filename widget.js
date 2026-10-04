@@ -2,7 +2,7 @@
 // 1) Scriptable에서 새 스크립트에 붙여 넣고 한 번 실행 → 깃허브 토큰 입력
 // 2) 홈 화면(또는 잠금 화면)에 Scriptable 위젯 추가 → 길게 눌러 편집 → Script 선택
 // 3) Parameter 칸에 원하는 구성을 적기 (앱 설정 → 홈 화면 위젯에서 골라 복사)
-//    종류: 등급 · 백분위 · 원점수 · 디데이 · 행동강령 · 요약 · 오답
+//    종류: 등급 · 백분위 · 원점수 · 행동강령 · 요약 · 오답
 //    디자인: 기본 · 배경 · 다크 · 컬러      글꼴: 고딕 · 얇게 · 둥근 · 명조 · 모노
 //    예) 백분위 다크 명조
 // 기록은 앱의 '기기 연동'(깃허브 비공개 Gist)에서 읽어 옵니다.
@@ -14,7 +14,7 @@ const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae',
 const AREA_DEF = { '독서': '#5b6b85', '문학': '#8f8aae', '선택': '#b3a78a' };
 
 // ---------- 구성 읽기 ----------
-const TYPES = { '등급': 'grade', '백분위': 'pct', '원점수': 'raw', '점수': 'raw', '디데이': 'dday', 'd-day': 'dday', 'dday': 'dday', '행동강령': 'rule', '강령': 'rule', '요약': 'summary', '오답': 'wrong' };
+const TYPES = { '등급': 'grade', '백분위': 'pct', '원점수': 'raw', '점수': 'raw', '행동강령': 'rule', '강령': 'rule', '요약': 'summary', '오답': 'wrong' };
 const STYLES = { '기본': 'card', '카드': 'card', '배경': 'bg', '다크': 'dark', '어둡게': 'dark', '컬러': 'color', '색': 'color' };
 const FACES = { '고딕': 'sans', '얇게': 'thin', '가는': 'thin', '둥근': 'round', '명조': 'serif', '모노': 'mono' };
 function parseParam(p) {
@@ -109,13 +109,6 @@ function fonts(face) {
 
 // ---------- 데이터 도우미 ----------
 const shortDate = (d) => (d || '').slice(5).replace('.', '/');
-function dLeft(s) {
-  const m = /(\d{4})\D(\d{1,2})\D(\d{1,2})/.exec(s || '');
-  if (!m) return null;
-  const t = new Date(+m[1], +m[2] - 1, +m[3]), now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return Math.round((t - now) / 86400000);
-}
 const SERIES = {
   grade: { key: 'grade', title: '등급 추이', unit: '등급', invert: true, target: (s) => s.targetGrade },
   pct: { key: 'pct', title: '백분위 추이', unit: '', invert: false, target: (s) => s.targetPct },
@@ -211,15 +204,6 @@ function barsImg(rows, labels, colors, o) {
   return dc.getImage();
 }
 
-// ---------- 그림: 진행 막대 ----------
-function progressImg(frac, W, P) {
-  const dc = new DrawContext();
-  dc.size = new Size(W, 4); dc.opaque = false; dc.respectScreenScale = true;
-  let p = new Path(); p.addRoundedRect(new Rect(0, 0, W, 4), 2, 2); dc.setFillColor(C(P.line)); dc.addPath(p); dc.fillPath();
-  p = new Path(); p.addRoundedRect(new Rect(0, 0, Math.max(4, W * Math.min(1, Math.max(0, frac))), 4), 2, 2); dc.setFillColor(C(P.accent)); dc.addPath(p); dc.fillPath();
-  return dc.getImage();
-}
-
 // ---------- 위젯 조각 ----------
 function text(st, s, font, color, lines) {
   const t = st.addText(String(s));
@@ -248,8 +232,8 @@ function trend(w, ctx, kind) {
   const N = fam === 'small' ? 6 : fam === 'large' ? 16 : 10;
   const rows = rowsAll.slice(-N), vals = rows.map((e) => e[S.key]);
   const last = rows[rows.length - 1], prev = rows[rows.length - 2];
-  const tg = S.target(s), dd = dLeft(s.examDate);
-  header(w, S.title, fam !== 'small' && dd != null && dd >= 0 ? 'D-' + dd : '', ctx);
+  const tg = S.target(s);
+  header(w, S.title, fam !== 'small' && rowsAll.length ? rowsAll.length + '회' : '', ctx);
   w.addSpacer(2);
   const row = w.addStack(); row.layoutHorizontally(); row.bottomAlignContent();
   text(row, last ? last[S.key] : '–', F.num(fam === 'small' ? 30 : 34, 'ul'), P.text);
@@ -278,40 +262,6 @@ function trend(w, ctx, kind) {
   }
 }
 
-function dday(w, ctx) {
-  const { P, F, fam, s, exams } = ctx;
-  const d = dLeft(s.examDate), last = exams[exams.length - 1];
-  const left = fam === 'small' ? w : (() => { const r = w.addStack(); r.layoutHorizontally(); r.topAlignContent(); const l = r.addStack(); l.layoutVertically(); r.addSpacer(); ctx.right = r.addStack(); ctx.right.layoutVertically(); return l; })();
-  text(left, '수능까지', F.txt(10), P.sub);
-  left.addSpacer(2);
-  text(left, d == null ? '–' : d > 0 ? 'D-' + d : d === 0 ? 'D-DAY' : '끝', F.num(fam === 'small' ? 40 : 46, 'ul'), P.accent);
-  text(left, s.examDate || '', F.txt(9), P.faint);
-  if (d != null && d >= 0) {
-    left.addSpacer(8);
-    image(left, progressImg(1 - d / 365, fam === 'small' ? 120 : 130, P), fam === 'small' ? 120 : 130, 4);
-    left.addSpacer(3);
-    text(left, '올해 ' + Math.round((1 - d / 365) * 100) + '% 지남', F.txt(8), P.faint);
-  }
-  if (ctx.right && last) {
-    const r = ctx.right;
-    text(r, last.name || last.org || '최근 시험', F.txt(9), P.sub);
-    r.addSpacer(4);
-    [['원점수', last.raw, '점'], ['백분위', last.pct, ''], ['등급', last.grade, '등급']].forEach((kv) => {
-      const line = r.addStack(); line.layoutHorizontally(); line.bottomAlignContent();
-      text(line, kv[0] + '  ', F.txt(9), P.faint);
-      text(line, kv[1] == null ? '–' : kv[1], F.num(17, 'li'), P.text);
-      if (kv[2]) text(line, ' ' + kv[2], F.txt(8), P.faint);
-    });
-  }
-  if (fam === 'large') {
-    w.addSpacer();
-    const rl = [...exams].reverse().find((e) => e.rule);
-    text(w, '다음 시험 행동강령', F.txt(9), P.sub);
-    w.addSpacer(4);
-    text(w, rl ? rl.rule : '모의고사 기록에 행동강령을 적어 보세요', F.txt(12), P.text, 9);
-  } else w.addSpacer();
-}
-
 function rule(w, ctx) {
   const { P, F, fam, exams } = ctx;
   const rl = [...exams].reverse().find((e) => e.rule);
@@ -326,8 +276,7 @@ function rule(w, ctx) {
 function summary(w, ctx) {
   const { P, F, fam, s, exams } = ctx;
   const last = exams[exams.length - 1] || {}, prev = exams[exams.length - 2] || {};
-  const dd = dLeft(s.examDate);
-  header(w, last.name ? '최근 · ' + last.name : '최근 시험', dd != null && dd >= 0 ? 'D-' + dd : '', ctx);
+  header(w, '최근 시험', last.name || '', ctx);
   w.addSpacer(fam === 'small' ? 4 : 6);
   const items = [['원점수', 'raw', '점', false], ['백분위', 'pct', '', false], ['등급', 'grade', '등급', true]];
   const cell = (st, kv, big) => {
@@ -395,11 +344,9 @@ function lock(w, ctx) {
   const { F, fam, s, exams, o } = ctx;
   const W = new Color('#ffffff');
   const last = exams[exams.length - 1] || {};
-  const dd = dLeft(s.examDate);
   const S = SERIES[o.type] || SERIES.grade;
   if (fam === 'accessoryInline') {
     const parts = [];
-    if (dd != null && dd >= 0) parts.push('수능 D-' + dd);
     if (last.grade != null) parts.push(last.grade + '등급');
     if (last.pct != null) parts.push('백분위 ' + last.pct);
     const t = w.addText(parts.join(' · ') || '국어'); t.font = F.txt(12);
@@ -407,17 +354,16 @@ function lock(w, ctx) {
   }
   if (fam === 'accessoryCircular') {
     w.addAccessoryWidgetBackground = true;
-    const isD = o.type === 'dday' || o.type === 'rule' || o.type === 'summary' || o.type === 'wrong';
-    const a = w.addText(isD ? 'D' : S.title.slice(0, 2)); a.font = F.txt(9); a.textColor = W; a.centerAlignText();
-    const b = w.addText(isD ? (dd != null && dd >= 0 ? String(dd) : '–') : (last[S.key] == null ? '–' : String(last[S.key])));
+    const a = w.addText(S.title.slice(0, S.key === 'grade' ? 2 : 3)); a.font = F.txt(9); a.textColor = W; a.centerAlignText();
+    const b = w.addText(last[S.key] == null ? '–' : String(last[S.key]));
     b.font = F.num(22, 'li'); b.textColor = W; b.centerAlignText(); b.minimumScaleFactor = 0.5;
     return;
   }
   // accessoryRectangular
   const top = w.addStack(); top.layoutHorizontally();
-  const tt = top.addText(o.type === 'dday' ? '수능' : S.title.replace(' 추이', '')); tt.font = F.txt(10);
+  const tt = top.addText(S.title.replace(' 추이', '')); tt.font = F.txt(10);
   top.addSpacer();
-  const v = top.addText(o.type === 'dday' ? (dd != null && dd >= 0 ? 'D-' + dd : '–') : (last[S.key] == null ? '–' : last[S.key] + S.unit)); v.font = F.num(13, 'me');
+  const v = top.addText(last[S.key] == null ? '–' : last[S.key] + S.unit); v.font = F.num(13, 'me');
   const ser = exams.filter((e) => e[S.key] != null).slice(-8);
   if (ser.length > 1) {
     const P = { line: '#ffffff', good: '#ffffff', accent: '#ffffff', dot: '#000000', text: '#ffffff', sub: '#ffffff', faint: '#ffffff' };
@@ -449,8 +395,7 @@ async function build(o) {
   ctx.P = palette(s.theme, o.style);
   w.backgroundColor = C(ctx.P.bg);
   w.setPadding(13, 15, 11, 15);
-  if (o.type === 'dday') dday(w, ctx);
-  else if (o.type === 'rule') rule(w, ctx);
+  if (o.type === 'rule') rule(w, ctx);
   else if (o.type === 'summary') summary(w, ctx);
   else if (o.type === 'wrong') wrong(w, ctx);
   else trend(w, ctx, o.type);
@@ -464,7 +409,7 @@ async function main() {
     const m = new Alert();
     m.title = '국어 대시보드 위젯';
     m.message = '미리볼 종류를 고르세요. 위젯에서는 Parameter 칸으로 정합니다.';
-    const names = ['등급', '백분위', '원점수', '디데이', '행동강령', '요약', '오답'];
+    const names = ['등급', '백분위', '원점수', '행동강령', '요약', '오답'];
     names.forEach((n) => m.addAction(n));
     m.addAction('토큰 바꾸기');
     m.addCancelAction('닫기');
