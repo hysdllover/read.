@@ -1,5 +1,6 @@
 // 국어 대시보드 위젯 (iOS Scriptable 앱용)
-// 1) Scriptable에서 새 스크립트에 붙여 넣고 한 번 실행 → 깃허브 토큰 입력
+// 1) 앱 설정 → 홈 화면 위젯 → '스크립트 복사' → Scriptable에서 새 스크립트에 붙여 넣기
+//    (복사할 때 기기 연동 토큰이 자동으로 들어갑니다. 이 스크립트는 다른 사람과 공유하지 마세요)
 // 2) 홈 화면(또는 잠금 화면)에 Scriptable 위젯 추가 → 길게 눌러 편집 → Script 선택
 // 3) Parameter 칸에 원하는 구성을 적기 (앱 설정 → 홈 화면 위젯에서 골라 복사)
 //    종류: 등급 · 백분위 · 원점수 · 행동강령 · 요약 · 오답
@@ -9,7 +10,8 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const KEY_TOKEN = 'kor-dash-token';
+const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
+const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
 const AREA_DEF = { '독서': '#5b6b85', '문학': '#8f8aae', '선택': '#b3a78a' };
 
@@ -27,24 +29,12 @@ function parseParam(p) {
   return o;
 }
 
-// ---------- 토큰 ----------
-async function ask() {
-  const a = new Alert();
-  a.title = '국어 대시보드 위젯';
-  a.message = '앱 설정 → 기기 연동에서 쓰는 깃허브 토큰을 붙여 넣으세요.';
-  a.addSecureTextField('깃허브 토큰 (ghp_…)', Keychain.contains(KEY_TOKEN) ? Keychain.get(KEY_TOKEN) : '');
-  a.addAction('저장');
-  a.addCancelAction('취소');
-  if (await a.present() === -1) return;
-  Keychain.set(KEY_TOKEN, a.textFieldValue(0).trim());
-}
-
 // ---------- 기록 불러오기 (실패하면 마지막 저장본) ----------
 const fm = FileManager.local();
 const cachePath = () => fm.joinPath(fm.documentsDirectory(), 'kor-dash.json');
 async function gh(path) {
   const r = new Request('https://api.github.com' + path);
-  r.headers = { Authorization: 'Bearer ' + Keychain.get(KEY_TOKEN), Accept: 'application/vnd.github+json' };
+  r.headers = { Authorization: 'Bearer ' + TOKEN, Accept: 'application/vnd.github+json' };
   return await r.loadJSON();
 }
 async function load() {
@@ -64,7 +54,7 @@ async function load() {
     let text = f.content;
     if (f.truncated && f.raw_url) {
       const rr = new Request(f.raw_url);
-      rr.headers = { Authorization: 'Bearer ' + Keychain.get(KEY_TOKEN) };
+      rr.headers = { Authorization: 'Bearer ' + TOKEN };
       text = await rr.loadString();
     }
     fm.writeString(cachePath(), text);
@@ -381,7 +371,7 @@ async function build(o) {
   const F = fonts(o.face);
   let data;
   try {
-    if (!Keychain.contains(KEY_TOKEN)) throw new Error('Scriptable에서 스크립트를 한 번 실행해 토큰을 입력하세요');
+    if (!hasToken()) throw new Error('앱에서 기기 연동을 켠 뒤 설정 → 홈 화면 위젯에서 스크립트를 다시 복사해 주세요');
     data = await load();
   } catch (e) {
     w.backgroundColor = C(DEF.card);
@@ -405,17 +395,14 @@ async function build(o) {
 async function main() {
   let o = parseParam(args.widgetParameter);
   if (!config.runsInWidget) {
-    if (!Keychain.contains(KEY_TOKEN)) await ask();
     const m = new Alert();
     m.title = '국어 대시보드 위젯';
     m.message = '미리볼 종류를 고르세요. 위젯에서는 Parameter 칸으로 정합니다.';
     const names = ['등급', '백분위', '원점수', '행동강령', '요약', '오답'];
     names.forEach((n) => m.addAction(n));
-    m.addAction('토큰 바꾸기');
     m.addCancelAction('닫기');
     const i = await m.present();
     if (i === -1) return;
-    if (i === names.length) { await ask(); return; }
     o = parseParam(names[i]);
   }
   const widget = await build(o);
