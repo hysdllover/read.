@@ -514,3 +514,8 @@ a.btn{text-decoration:none;}
 .wb-sticky{position:sticky;top:calc(64px + env(safe-area-inset-top));z-index:6;min-height:0;box-shadow:0 6px 16px rgba(20,24,35,.08);}
 .wb-sticky{flex-direction:column;gap:6px;}
 .wp-over{font-size:.625rem;color:var(--bad);background:rgba(255,255,255,.8);padding:2px 8px;border-radius:999px;}
+/* 투명(Clear) 홈 화면 흉내 */
+.wp-stage.clear{background:linear-gradient(150deg,#b9b2a4,#cfc6b5 45%,#8e9bb0);}
+.wp-clear{background:rgba(255,255,255,.14) !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 4px 18px rgba(20,24,35,.10) !important;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
+.wp-clear > *{filter:brightness(0) invert(1);opacity:.92;}

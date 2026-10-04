@@ -216,7 +216,7 @@ var WidgetBuilder = (function () {
     show: { title: true, value: true, delta: true, target: true, labels: true, dates: true, stats: true, exam: true }
   };
   var SIZE_KEY = { '작게': 'small', '중간': 'medium', '크게': 'large', '잠금 원형': 'accessoryCircular', '잠금 사각': 'accessoryRectangular', '잠금 한 줄': 'accessoryInline' };
-  var sel = 0, size = '중간', scriptText = '';
+  var sel = 0, size = '중간', scriptText = '', look = '기본';
 
   /* 구성요소 종류와 옵션 */
   var MET = [['등급', 'grade'], ['백분위', 'pct'], ['원점수', 'raw'], ['오답 합계', 'wrong'], ['독서 오답', 'w독서'], ['문학 오답', 'w문학'], ['선택 오답', 'w선택']];
@@ -291,7 +291,7 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
-  var SCRIPT_VER = 19;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
+  var SCRIPT_VER = 20;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();
@@ -345,9 +345,11 @@ var WidgetBuilder = (function () {
     /* 미리보기 */
     var stage = h('<div class="wp-stage wb-sticky"><div class="t-xs dim">미리보기를 준비하는 중…</div></div>');
     box.appendChild(stage);
-    var sz = form(fSeg('미리보기 크기', 'wsize', Object.keys(SIZE_KEY), size));
+    var sz = form(fSeg('미리보기 크기', 'wsize', Object.keys(SIZE_KEY), size) +
+      fSeg('홈 화면 모양 (아이폰 설정과 같게)', 'wlook', ['기본', '투명'], look));
     bindForm(sz);
     sz.querySelector('[data-seg=wsize]').addEventListener('pick', function (e) { size = e.detail; draw(); });
+    sz.querySelector('[data-seg=wlook]').addEventListener('pick', function (e) { look = e.detail; draw(); });
     box.appendChild(sz);
 
     /* 구성 */
@@ -474,6 +476,10 @@ var WidgetBuilder = (function () {
       WidgetPreview.render(scriptText, Store.data, cfg.name, fam).then(function (el) {
         stage.innerHTML = '';
         stage.classList.toggle('lock', fam.indexOf('accessory') === 0);
+        /* 투명(Clear) 모양: iOS가 배경을 지우고 내용을 흰색으로 그림 */
+        var clear = look === '투명' && fam.indexOf('accessory') !== 0;
+        stage.classList.toggle('clear', clear);
+        if (clear) el.classList.add('wp-clear');
         /* 편집하는 동안 위에 붙어 따라오므로 높이도 제한 */
         var s2 = WidgetPreview.SIZES[fam], room = stage.clientWidth - 24, k = Math.min(1, room / s2[0], (window.innerWidth < 700 ? 190 : 300) / s2[1]);
         var holder = h('<div style="width:' + s2[0] * k + 'px;height:' + s2[1] * k + 'px"></div>');

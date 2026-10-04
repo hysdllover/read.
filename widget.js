@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 19;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 20;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -174,6 +174,16 @@ function delta(cur, prev, invert) {
 }
 const hitOf = (M, v, tg) => tg != null && (M.invert ? v <= tg : v >= tg);
 
+// 날짜 글자가 겹치지 않게: 마지막 날짜부터 거꾸로, 충분히 떨어진 것만 표시
+function dateMarks(xs, minGap) {
+  const keep = new Set();
+  let lastX = Infinity;
+  for (let i = xs.length - 1; i >= 0; i--) {
+    if (lastX - xs[i] >= minGap) { keep.add(i); lastX = xs[i]; }
+  }
+  return keep;
+}
+
 // ---------- 그림: 추이 (곡선 · 직선 · 막대 · 점) ----------
 function chartImg(vals, labels, o) {
   const { W, H, P, F } = o;
@@ -219,6 +229,7 @@ function chartImg(vals, labels, o) {
     }
     dc.setStrokeColor(C(col)); dc.setLineWidth(o.lw || 1.5); dc.addPath(p); dc.strokePath();
   }
+  const marks = dateMarks(pts.map((q) => q.x), 34);
   pts.forEach((q, i) => {
     const last = i === n - 1;
     const hit = o.target != null && (o.invert ? vals[i] <= o.target : vals[i] >= o.target);
@@ -237,7 +248,7 @@ function chartImg(vals, labels, o) {
       const ty = bar ? Math.min(q.y, H - B - 2) - 12 : q.y - 15;
       dc.drawTextInRect(String(vals[i]), new Rect(q.x - 14, ty, 28, 11));
     }
-    if (o.dates && labels && (gap >= 26 || i % 2 === 0 || last)) {
+    if (o.dates && labels && marks.has(i)) {
       dc.setTextAlignedCenter();
       dc.setFont(F.num(7.5, 're')); dc.setTextColor(C(P.faint));
       dc.drawTextInRect(labels[i], new Rect(q.x - 16, H - B + 4, 32, 10));
@@ -258,6 +269,7 @@ function stackImg(rows, labels, colors, o) {
   const X = (i) => n === 1 ? W / 2 : L + i * gap;
   dc.setStrokeColor(C(P.line)); dc.setLineWidth(0.6);
   const p = new Path(); p.move(new Point(0, H - B)); p.addLine(new Point(W, H - B)); dc.addPath(p); dc.strokePath();
+  const marks = dateMarks(rows.map((r, i) => X(i)), 34);
   rows.forEach((r, i) => {
     let y = H - B;
     r.forEach((v, j) => {
@@ -272,7 +284,7 @@ function stackImg(rows, labels, colors, o) {
       dc.setFont(F.num(8, i === n - 1 ? 'se' : 're')); dc.setTextColor(C(i === n - 1 ? P.text : P.sub));
       dc.drawTextInRect(String(tot[i]), new Rect(X(i) - 12, y - 12, 24, 10));
     }
-    if (o.dates && (gap >= 26 || i % 2 === 0 || i === n - 1)) {
+    if (o.dates && marks.has(i)) {
       dc.setTextAlignedCenter();
       dc.setFont(F.num(7.5, 're')); dc.setTextColor(C(P.faint));
       dc.drawTextInRect(labels[i], new Rect(X(i) - 16, H - B + 4, 32, 10));
