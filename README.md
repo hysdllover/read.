@@ -8,7 +8,7 @@
 
 1. 새 저장소 생성 (예: `korean-dash`, Public)
 2. 아래 파일을 **폴더 없이 그대로** 업로드
-   `index.html` `style.css` `core.js` `ui.js` `sync.js` `view-home.js` `view-reading.js` `view-exam.js` `view-genre.js` `view-settings.js` `view-report.js`
+   `index.html` `style.css` `core.js` `ui.js` `sync.js` `view-home.js` `view-reading.js` `view-exam.js` `view-genre.js` `view-settings.js` `view-report.js` `widget.js` `widget-preview.js`
    `sw.js` `manifest.json` `icon-180.png` `icon-192.png` `icon-512.png`
    (`build-preview.js`, `preview.html`은 확인용이라 올리지 않아도 됩니다)
 3. Settings → Pages → Source: `Deploy from a branch` → `main` / `/(root)` → Save
@@ -40,13 +40,14 @@
 
 - 홈 화면 아이콘(`icon-*.png`)과 `manifest.json`으로 앱처럼 열림
 - `sw.js`: 온라인이면 항상 최신 파일로 열고, **인터넷이 없을 때는 저장본으로 열림**. 새 버전이 올라오면 앱이 자동으로 한 번 새로고침
-- 파일을 고쳐 올릴 때는 `sw.js`의 `CACHE`와 `core.js`의 `APP_VER`를 같은 새 값으로 올려 주세요 (현재 `kor-v13`, 설정 맨 아래에 표시)
+- 파일을 고쳐 올릴 때는 `sw.js`의 `CACHE`와 `core.js`의 `APP_VER`를 같은 새 값으로 올려 주세요 (현재 `kor-v14`, 설정 맨 아래에 표시)
 
-## 홈 화면 위젯 (등급 추이)
+## 홈 화면 위젯
 
-- iOS는 Safari 웹앱 위젯을 지원하지 않아 무료 앱 **Scriptable**로 만듭니다 → `widget-grade.js`
-- 앱 설정 → 홈 화면 위젯에서 스크립트·토큰 복사, 단계 안내
-- 기기 연동(Gist)의 기록을 읽어 그리며, 앱 테마 색상을 따라갑니다
+- iOS는 Safari 웹앱 위젯을 지원하지 않아 무료 앱 **Scriptable**로 만듭니다 → `widget.js` (스크립트 하나로 여러 위젯)
+- 위젯 편집의 **Parameter**로 구성 지정 — 종류: 등급·백분위·원점수·디데이·행동강령·요약·오답 / 디자인: 기본·배경·다크·컬러 / 글꼴: 고딕·얇게·둥근·명조·모노 (예: `백분위 다크 명조`)
+- 크기: 홈 화면 작게·중간·크게, 잠금 화면 원형·사각·한 줄
+- 앱 설정 → 홈 화면 위젯에서 골라 미리보기(`widget-preview.js`) 후 Parameter·스크립트·토큰 복사
 
 ## 기능을 고치거나 추가할 때
 

@@ -487,3 +487,13 @@ section{margin-bottom:22px;}
 .steps{margin:0;padding-left:18px;font-size:.75rem;color:var(--t2);line-height:1.8;}
 .steps b{font-weight:var(--wb);color:var(--t1);}
 a.btn{text-decoration:none;}
+
+/* 위젯 미리보기 */
+.wp-stage{display:flex;justify-content:center;align-items:center;min-height:190px;margin:4px 0 10px;padding:18px 10px;border-radius:var(--r-s);
+  background:linear-gradient(160deg,#cfd4de,#e4e1ea);overflow-x:auto;}
+.wp-stage.lock{background:linear-gradient(160deg,#2b3140,#4a4458);min-height:120px;}
+.wp-widget{box-shadow:0 4px 18px rgba(20,24,35,.12);flex:0 0 auto;}
+.wp-lock{box-shadow:none;}
+.wp-param{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 10px;border-radius:var(--r-s);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line-2);}
+.wp-param b{flex:1 1 auto;font-weight:var(--wb);font-size:.8125rem;color:var(--t1);}
+.wp-param .btn{padding:6px 12px;}
