@@ -85,13 +85,13 @@ var WidgetPreview = (function () {
     function makeStack(el, vertical) {
       el.style.display = 'flex';
       el.style.flexDirection = vertical ? 'column' : 'row';
-      el.style.alignItems = vertical ? 'flex-start' : 'center';
+      el.style.alignItems = 'center';   // iOS(SwiftUI) 기본: 가운데
       el.style.minWidth = '0';
       var st = {
         el: el,
         layoutHorizontally: function () { el.style.flexDirection = 'row'; el.style.alignItems = 'center'; },
-        layoutVertically: function () { el.style.flexDirection = 'column'; el.style.alignItems = 'flex-start'; },
-        centerAlignContent: function () { el.style.alignItems = 'center'; el.dataset.center = '1'; },
+        layoutVertically: function () { el.style.flexDirection = 'column'; el.style.alignItems = 'center'; },
+        centerAlignContent: function () { el.style.alignItems = 'center'; },
         topAlignContent: function () { el.style.alignItems = 'flex-start'; },
         bottomAlignContent: function () { el.style.alignItems = 'baseline'; },
         setPadding: function (t, l, b, r) { el.style.padding = t + 'px ' + r + 'px ' + b + 'px ' + l + 'px'; },
@@ -99,6 +99,8 @@ var WidgetPreview = (function () {
           var sp = document.createElement('div'); sp.textContent = s;
           sp.style.flexShrink = '0'; sp.style.whiteSpace = 'pre-wrap'; sp.style.lineHeight = '1.2'; sp.style.wordBreak = 'keep-all'; sp.style.overflowWrap = 'anywhere';
           el.appendChild(sp);
+          /* 줄(가로) 안의 글은 줄어들며 줄바꿈 (iOS와 같게) */
+          if (el.style.flexDirection === 'row') { sp.style.flexShrink = '1'; sp.style.minWidth = '0'; }
           var o = {};
           Object.defineProperty(o, 'font', { set: function (f) { sp.style.font = f.css; sp.style.lineHeight = '1.2'; } });
           Object.defineProperty(o, 'textColor', { set: function (c) { sp.style.color = c.css; } });
@@ -113,8 +115,13 @@ var WidgetPreview = (function () {
           var d = document.createElement('div');
           d.style.flex = n == null ? '1 1 0' : '0 0 ' + n + 'px';
           el.appendChild(d);
+          /* 늘어나는 여백이 있으면 그 묶음이 남은 공간을 모두 차지 (iOS와 같게) */
+          if (n == null) {
+            var par = el.parentElement, parRow = par && par.style.flexDirection === 'row', row = el.style.flexDirection === 'row';
+            if (row === parRow) el.style.flexGrow = '1'; else el.style.alignSelf = 'stretch';
+          }
         },
-        addStack: function () { var d = document.createElement('div'); d.style.flexShrink = '0'; if (!(el.dataset.center && el.style.flexDirection === 'column')) d.style.alignSelf = 'stretch'; el.appendChild(d); return makeStack(d, false); },
+        addStack: function () { var d = document.createElement('div'); d.style.flexShrink = '0'; el.appendChild(d); return makeStack(d, false); },
         addImage: function (c) {
           el.appendChild(c); c.style.display = 'block'; c.style.flexShrink = '0';
           var o = {};
@@ -284,9 +291,11 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
+  var SCRIPT_VER = 19;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();
+    if ((Store.data.settings.widgetScriptVer || 0) < SCRIPT_VER) { Store.data.settings.widgetScriptVer = SCRIPT_VER; save(); }
     if (sel >= ws.length) sel = 0;
     var cfg = ws[sel];
     cfg.show = Object.assign({}, DEF.show, cfg.show || {});
