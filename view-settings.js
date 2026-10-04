@@ -1,11 +1,11 @@
-/* view-settings.js — 목표 / 색상 / 코드 / 기기 연동 / 백업 */
+/* view-settings.js — 목표 / 색상 / 기기 연동 / 백업 */
 'use strict';
 
 var SettingsView = (function () {
 
   function exportJSON() {
     var txt = JSON.stringify(Store.data, null, 1);
-    var name = 'korean-' + CODE + '-' + today().replace(/\./g, '') + '.json';
+    var name = 'korean-' + today().replace(/\./g, '') + '.json';
     try {
       var url = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
       var a = document.createElement('a');
@@ -97,16 +97,9 @@ var SettingsView = (function () {
   function render(root) {
     var s = Store.data.settings;
 
-    /* 코드 */
-    var g0 = h('<section><div class="sec-h"><h2>코드</h2></div></section>');
-    var c0 = h('<div class="card spread"><div><div class="item-t num">코드 ' + esc(CODE) + '</div>' +
-      '<div class="item-s">독해 ' + Store.data.reading.length + ' · 모의고사 ' + Store.data.exams.length +
-      ' · 지문 ' + Store.data.passages.length + '</div></div></div>');
-    var out = h('<button type="button" class="btn">코드 바꾸기</button>');
-    out.onclick = function () { App.logout(); };
-    c0.appendChild(out);
-    g0.appendChild(c0);
-    root.appendChild(g0);
+    /* 기록 현황 */
+    root.appendChild(h('<section><div class="card"><div class="item-s">독해 노트 ' + Store.data.reading.length +
+      ' · 모의고사 ' + Store.data.exams.length + ' · 지문 ' + Store.data.passages.length + '</div></div></section>'));
 
     /* 기기 연동 */
     var cfg = Sync.cfg();
@@ -315,7 +308,7 @@ var SettingsView = (function () {
     cw.innerHTML = '<ol class="steps">' +
       '<li>앱스토어에서 무료 앱 <b>Scriptable</b> 설치</li>' +
       '<li>아래 <b>스크립트 복사</b> → Scriptable에서 ＋ 눌러 붙여 넣고 실행</li>' +
-      '<li>처음 실행할 때 깃허브 토큰과 코드(' + esc(CODE) + ') 입력</li>' +
+      '<li>처음 실행할 때 깃허브 토큰 입력 (토큰 복사 버튼 사용)</li>' +
       '<li>홈 화면 길게 누르기 → ＋ → Scriptable 위젯 추가 → 위젯 길게 눌러 편집 → Script에서 방금 만든 스크립트 선택</li>' +
       '</ol><div class="t-xs dim" style="margin:6px 0 10px">기기 연동(깃허브)이 켜져 있어야 하고, 위젯은 약 1시간마다 새로 그려집니다. 크기는 작게·중간·크게 모두 됩니다.</div>';
     var wrow = h('<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>');
@@ -384,9 +377,9 @@ var SettingsView = (function () {
     root.appendChild(g3);
 
     /* 초기화 */
-    var reset = h('<button type="button" class="btn full warn">이 코드의 기록 지우기</button>');
+    var reset = h('<button type="button" class="btn full warn">기록 전부 지우기</button>');
     reset.onclick = function () {
-      confirmSheet('코드 ' + CODE + '의 기록이 모두 삭제됩니다.\n되돌릴 수 없습니다.', '삭제').then(function (ok) {
+      confirmSheet('모든 기록이 삭제됩니다.\n되돌릴 수 없습니다.', '삭제').then(function (ok) {
         if (!ok) return;
         Store.data = DEFAULTS(); Store.save(); App.dday(); App.refresh(); toast('초기화했습니다');
       });

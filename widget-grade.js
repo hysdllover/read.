@@ -1,12 +1,11 @@
 // 국어 대시보드 — 등급 추이 위젯 (iOS Scriptable 앱용)
-// 사용법: Scriptable 앱에서 새 스크립트에 이 내용을 붙여 넣고 한 번 실행 → 토큰·코드 입력
+// 사용법: Scriptable 앱에서 새 스크립트에 이 내용을 붙여 넣고 한 번 실행 → 깃허브 토큰 입력
 //        홈 화면에 Scriptable 위젯 추가 → 길게 눌러 위젯 편집 → Script에서 이 스크립트 선택
-//        (Parameter 칸에 코드 숫자를 적으면 그 코드의 기록을 보여 줍니다. 비우면 처음 입력한 코드)
 // 기록은 앱의 '기기 연동'(깃허브 비공개 Gist)에서 읽어 옵니다. 앱에서 연동을 켜 두어야 합니다.
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const KEY_TOKEN = 'kor-dash-token', KEY_CODE = 'kor-dash-code';
+const KEY_TOKEN = 'kor-dash-token';
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
 
 // ---- 설정 (앱에서 직접 실행할 때만 묻기) ----
@@ -14,43 +13,48 @@ async function ask(force) {
   if (!force && Keychain.contains(KEY_TOKEN)) return;
   const a = new Alert();
   a.title = '국어 대시보드 위젯';
-  a.message = '앱 설정 → 기기 연동에서 쓰는 깃허브 토큰과 기록 코드(0~9)를 입력하세요.';
+  a.message = '앱 설정 → 기기 연동에서 쓰는 깃허브 토큰을 붙여 넣으세요.';
   a.addSecureTextField('깃허브 토큰 (ghp_…)', Keychain.contains(KEY_TOKEN) ? Keychain.get(KEY_TOKEN) : '');
-  a.addTextField('코드 (0~9)', Keychain.contains(KEY_CODE) ? Keychain.get(KEY_CODE) : '0');
   a.addAction('저장');
   a.addCancelAction('취소');
   if (await a.present() === -1) return;
   Keychain.set(KEY_TOKEN, a.textFieldValue(0).trim());
-  Keychain.set(KEY_CODE, (a.textFieldValue(1).trim() || '0').replace(/[^0-9]/g, '').slice(0, 1) || '0');
 }
 
 // ---- 기록 불러오기 (실패하면 마지막 저장본) ----
 const fm = FileManager.local();
-const cachePath = (code) => fm.joinPath(fm.documentsDirectory(), 'kor-dash-' + code + '.json');
+const cachePath = () => fm.joinPath(fm.documentsDirectory(), 'kor-dash.json');
 
 async function gh(path) {
   const r = new Request('https://api.github.com' + path);
   r.headers = { Authorization: 'Bearer ' + Keychain.get(KEY_TOKEN), Accept: 'application/vnd.github+json' };
   return await r.loadJSON();
 }
-async function load(code) {
+async function load() {
   try {
     const list = await gh('/gists?per_page=100');
     const g = (list || []).find((x) => x.description === GIST_DESC);
-    if (!g) throw new Error('연동 Gist 없음');
+    if (!g) throw new Error('연동 Gist 없음 — 앱에서 기기 연동을 켜 주세요');
     const full = await gh('/gists/' + g.id);
-    const f = full.files && full.files['korean-' + code + '.json'];
-    if (!f) throw new Error('코드 ' + code + ' 기록 없음');
+    // 기록 파일(korean-N.json)이 여럿이면 가장 최근에 저장된 것
+    let f = null, bt = -1;
+    Object.keys(full.files || {}).forEach((name) => {
+      if (!/^korean-\d\.json$/.test(name)) return;
+      let t = 0;
+      try { t = JSON.parse(full.files[name].content || '{}').t || 0; } catch (e) { t = 0; }
+      if (t >= bt) { bt = t; f = full.files[name]; }
+    });
+    if (!f) throw new Error('연동된 기록이 없습니다');
     let text = f.content;
     if (f.truncated && f.raw_url) {
       const rr = new Request(f.raw_url);
       rr.headers = { Authorization: 'Bearer ' + Keychain.get(KEY_TOKEN) };
       text = await rr.loadString();
     }
-    fm.writeString(cachePath(code), text);
+    fm.writeString(cachePath(), text);
     return JSON.parse(text);
   } catch (e) {
-    if (fm.fileExists(cachePath(code))) return JSON.parse(fm.readString(cachePath(code)));
+    if (fm.fileExists(cachePath())) return JSON.parse(fm.readString(cachePath()));
     throw e;
   }
 }
@@ -124,14 +128,13 @@ function dLeft(s) {
 
 async function build() {
   const fam = config.widgetFamily || 'medium';
-  const code = (args.widgetParameter || '').trim() || (Keychain.contains(KEY_CODE) ? Keychain.get(KEY_CODE) : '0');
   const w = new ListWidget();
   w.url = APP_URL;
   w.refreshAfterDate = new Date(Date.now() + 60 * 60 * 1000);
   let data;
   try {
     if (!Keychain.contains(KEY_TOKEN)) throw new Error('Scriptable에서 스크립트를 한 번 실행해 토큰을 입력하세요');
-    data = await load(code);
+    data = await load();
   } catch (e) {
     w.backgroundColor = C(DEF.bg);
     const t = w.addText(String(e.message || e)); t.font = Font.systemFont(11); t.textColor = C('#6c6d73');
@@ -186,7 +189,7 @@ async function main() {
       const m = new Alert();
       m.title = '등급 추이 위젯';
       m.addAction('위젯 미리보기');
-      m.addAction('토큰 · 코드 바꾸기');
+      m.addAction('토큰 바꾸기');
       m.addCancelAction('닫기');
       const i = await m.present();
       if (i === -1) return;

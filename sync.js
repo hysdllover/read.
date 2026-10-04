@@ -1,4 +1,4 @@
-/* sync.js — 코드별 기록을 깃허브 Gist(비공개)에 저장해 아이폰↔아이패드 연동
+/* sync.js — 기록을 깃허브 Gist(비공개)에 저장해 아이폰↔아이패드 연동
    토큰은 기기에만 저장되고 어디로도 전송되지 않습니다(깃허브 API 제외). */
 'use strict';
 
@@ -84,7 +84,23 @@ var Sync = {
   pull: function (gid) {
     var self = this;
     return this.api('/gists/' + gid).then(function (g) {
-      var f = g.files && g.files[self.file()];
+      var files = g.files || {};
+      var f = files[self.file()];
+      /* 이 칸의 파일이 없으면 Gist에 있는 다른 칸 기록으로 맞춤 (코드 기능을 없앤 뒤 기기 간 칸 번호 차이 보정) */
+      if (!f && !Store.data.exams.length && !Store.data.passages.length && !Store.data.reading.length) {
+        var best = null, bt = -1;
+        Object.keys(files).forEach(function (name) {
+          var m = /^korean-(\d)\.json$/.exec(name);
+          if (!m) return;
+          var t = 0;
+          try { t = JSON.parse(files[name].content || '{}').t || 0; } catch (e) { t = 0; }
+          if (t >= bt) { bt = t; best = m[1]; }
+        });
+        if (best !== null) {
+          CODE = best; LS.setItem(APP_KEY + ':code', CODE); Store.load(); self.switched = true;
+          f = files[self.file()];
+        }
+      }
       if (!f) return null;
       if (f.truncated && f.raw_url) {
         return fetch(f.raw_url).then(function (r) { return r.text(); }).then(function (t) { return JSON.parse(t); });
@@ -120,7 +136,7 @@ var Sync = {
       var c = self.cfg(); c.last = Date.now(); self.setCfg(c);
       self.busy = false; self.state = '';
       self.paint();
-      if (App.route === 'settings') App.refresh(); else if (manual) App.refresh();
+      if (App.route === 'settings' || manual || self.switched) { self.switched = false; App.dday(); App.refresh(); }
       if (manual) toast('동기화 완료');
     }).catch(function (e) {
       self.busy = false; self.state = e.message || '동기화 실패';
