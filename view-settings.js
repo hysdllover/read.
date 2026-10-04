@@ -305,75 +305,19 @@ var SettingsView = (function () {
     /* 홈 화면 위젯 (Scriptable) */
     var gw = h('<section><div class="sec-h"><h2>홈 화면 위젯</h2><span class="more">Scriptable 앱</span></div></section>');
     var cw = h('<div class="card"></div>');
-    var wopt = { type: '등급', style: '기본', face: '고딕', size: '중간' };
-    var SIZE_KEY = { '작게': 'small', '중간': 'medium', '크게': 'large', '잠금 원형': 'accessoryCircular', '잠금 사각': 'accessoryRectangular', '잠금 한 줄': 'accessoryInline' };
-    var wf = form(
-      fSeg('종류', 'wtype', ['등급', '백분위', '원점수', '행동강령', '요약', '오답'], wopt.type) +
-      fSeg('디자인', 'wstyle', ['기본', '배경', '다크', '컬러'], wopt.style) +
-      fSeg('글꼴', 'wface', ['고딕', '얇게', '둥근', '명조', '모노'], wopt.face) +
-      fSeg('크기 (미리보기)', 'wsize', Object.keys(SIZE_KEY), wopt.size)
-    );
-    bindForm(wf);
-    cw.appendChild(wf);
-    var stage = h('<div class="wp-stage"><div class="t-xs dim">미리보기를 준비하는 중…</div></div>');
-    cw.appendChild(stage);
-    var prm = h('<div class="wp-param"><span class="t-xs dim">Parameter</span><b class="num"></b><button type="button" class="btn">복사</button></div>');
-    cw.appendChild(prm);
-    var scriptText = '';
-    function paramText() { return wopt.type + ' ' + wopt.style + ' ' + wopt.face; }
-    function draw() {
-      prm.querySelector('b').textContent = paramText();
-      if (!scriptText || !window.WidgetPreview) return;
-      var fam = SIZE_KEY[wopt.size];
-      WidgetPreview.render(scriptText, Store.data, paramText(), fam).then(function (el) {
-        stage.innerHTML = '';
-        stage.classList.toggle('lock', fam.indexOf('accessory') === 0);
-        /* 화면이 좁으면 비율 그대로 줄여서 보여 줌 */
-        var sz = WidgetPreview.SIZES[fam], room = stage.clientWidth - 24, k = Math.min(1, room / sz[0]);
-        var box = h('<div style="width:' + sz[0] * k + 'px;height:' + sz[1] * k + 'px"></div>');
-        el.style.transform = 'scale(' + k + ')'; el.style.transformOrigin = '0 0';
-        box.appendChild(el);
-        stage.appendChild(box);
-      }).catch(function (e) { stage.innerHTML = '<div class="t-xs dim">미리보기를 그릴 수 없습니다 (' + esc(e.message || e) + ')</div>'; });
-    }
-    [['wtype', 'type'], ['wstyle', 'style'], ['wface', 'face'], ['wsize', 'size']].forEach(function (kv) {
-      wf.querySelector('[data-seg="' + kv[0] + '"]').addEventListener('pick', function (e) { wopt[kv[1]] = e.detail; draw(); });
-    });
-    fetch('widget.js', { cache: 'no-cache' }).then(function (r) { return r.text(); }).then(function (t) { scriptText = t; draw(); }).catch(function () {
-      stage.innerHTML = '<div class="t-xs dim">인터넷 연결 후 미리볼 수 있습니다</div>';
-    });
-    function copy(text, done) {
-      var settled = false;
-      var t = setTimeout(function () { if (!settled) { settled = true; fallback(text); } }, 1500);
-      try {
-        navigator.clipboard.writeText(text).then(function () {
-          if (!settled) { settled = true; clearTimeout(t); toast(done); }
-        }, function () { if (!settled) { settled = true; clearTimeout(t); fallback(text); } });
-      } catch (e) { settled = true; clearTimeout(t); fallback(text); }
-    }
-    function fallback(text) {
-      var ta = h('<textarea style="width:100%;height:160px;font-size:12px"></textarea>');
-      ta.value = text;
-      openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
-    }
-    prm.querySelector('button').onclick = function () { copy(paramText(), 'Parameter를 복사했습니다'); };
-
+    var wb = h('<div></div>');
+    cw.appendChild(wb);
+    WidgetBuilder.mount(wb);
     var steps = h('<div></div>');
     steps.innerHTML = '<ol class="steps">' +
       '<li>앱스토어에서 무료 앱 <b>Scriptable</b> 설치</li>' +
-      '<li><b>스크립트 복사</b> → Scriptable에서 ＋ 눌러 붙여 넣기 (연동 정보가 자동으로 들어가 따로 입력할 것 없음)</li>' +
+      '<li><b>스크립트 복사</b> → Scriptable에서 ＋ 눌러 붙여 넣기 (처음 한 번만)</li>' +
       '<li>홈 화면(또는 잠금 화면) 길게 누르기 → ＋ → Scriptable 위젯 추가</li>' +
-      '<li>위젯 길게 눌러 편집 → Script 선택, <b>Parameter</b>에 위에서 복사한 글 붙여 넣기</li>' +
-      '</ol><div class="t-xs dim" style="margin:6px 0 10px">스크립트 하나로 여러 위젯을 만들 수 있습니다 (위젯마다 Parameter만 다르게). 기기 연동이 켜져 있어야 하고 약 1시간마다 새로 그려집니다. 복사한 스크립트에는 연동 토큰이 들어 있으니 다른 사람과 공유하지 마세요.</div>';
+      '<li>위젯 길게 눌러 편집 → Script 선택, <b>Parameter</b>에 위젯 이름 적기</li>' +
+      '</ol><div class="t-xs dim" style="margin:6px 0 10px">여기서 구성·글꼴을 바꾸면 기기 연동으로 위젯에 자동 반영됩니다 (약 1시간마다 새로 그림). 복사한 스크립트에는 연동 토큰이 들어 있으니 다른 사람과 공유하지 마세요.</div>';
     cw.appendChild(steps);
     var cpS = h('<button type="button" class="btn full">스크립트 복사</button>');
-    cpS.onclick = function () {
-      if (!scriptText) { toast('스크립트를 불러오는 중입니다. 잠시 후 다시 눌러 주세요'); return; }
-      var tk = window.Sync && Sync.cfg().token;
-      if (!tk) { toast('먼저 위의 기기 연동(깃허브)을 켜 주세요'); return; }
-      /* 연동 토큰을 스크립트에 넣어서 복사 → Scriptable에서 따로 입력하지 않음 */
-      copy(scriptText.replace('__KOR_DASH_TOKEN__', tk.replace(/[^\w-]/g, '')), '스크립트를 복사했습니다');
-    };
+    cpS.onclick = WidgetBuilder.copyScript;
     cw.appendChild(cpS);
     cw.appendChild(h('<a class="btn full" style="margin-top:8px" href="https://apps.apple.com/app/scriptable/id1405459188" target="_blank" rel="noopener">Scriptable 앱 받기</a>'));
     gw.appendChild(cw);
