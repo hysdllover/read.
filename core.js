@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v22';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v23';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -235,6 +235,7 @@ var THEME_PRESETS = {
   '세이지': { accent: '#6e8c8a', good: '#7a8465', bad: '#99857a', hl: '#8085a0', bg: '#f3f5f3', card: '#ffffff', text: '#202422' },
   '로즈': { accent: '#8f7782', good: '#7f8a6a', bad: '#a07070', hl: '#8f8aae', bg: '#f8f5f5', card: '#ffffff', text: '#2a2325' },
   '샌드': { accent: '#857d66', good: '#7a8465', bad: '#a08a8a', hl: '#8085a0', bg: '#f6f5f1', card: '#fffefb', text: '#26251f' },
+  '노트': { accent: '#4f6788', good: '#7a8465', bad: '#b07a80', hl: '#8f8aae', bg: '#efede6', card: '#fbfaf5', text: '#2c2f36', paper: 1, note: 'lined', margin: true },
   '종이': { accent: '#5f6676', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#efe9dc', card: '#f8f4ea', text: '#2f2b25', paper: 2 },
   '나이트': { accent: '#8fa0bd', good: '#9aa883', bad: '#c39ca0', hl: '#aaa5c8', bg: '#1b1f27', card: '#242933', text: '#e4e6ec' }
 };
@@ -280,6 +281,12 @@ function applyTheme(t) {
   set('--paper', lv ? paperTex(lv, dark, 1) : 'none');
   set('--paper-card', lv ? paperTex(lv, dark, 0.6) : 'none');
   document.documentElement.classList.toggle('paper', !!lv);
+  /* 노트 무늬: 줄 · 모눈 · 점, 왼쪽 여백선 */
+  set('--rule', mixHex(t.card, mixHex(t.accent, t.text, 0.3), dark ? 0.2 : 0.13));
+  set('--margin-line', mixHex(t.card, t.bad, 0.55));
+  var root = document.documentElement;
+  ['lined', 'grid', 'dot'].forEach(function (k) { root.classList.toggle('note-' + k, t.note === k); });
+  root.classList.toggle('note-margin', !!t.margin && !!t.note);
 }
 function paperTex(lv, dark, k) {
   var a = [0, 0.05, 0.09, 0.14][lv] * k, b = [0, 0.035, 0.06, 0.09][lv] * k;

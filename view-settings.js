@@ -156,7 +156,7 @@ var SettingsView = (function () {
       var b = h('<button type="button" class="th-p"><i>' + ['accent', 'good', 'bad', 'hl'].map(function (k) {
         return '<b style="background:' + t[k] + '"></b>';
       }).join('') + '</i>' + esc(name) + '</button>');
-      b.onclick = function () { var y = window.scrollY; saveTheme(Object.assign({}, presets[name], { paper: presets[name].paper != null ? presets[name].paper : (+currentTheme().paper || 0) })); App.refresh(); window.scrollTo(0, y); toast(name + ' 적용'); };
+      b.onclick = function () { var y = window.scrollY; var ct = currentTheme(); saveTheme(Object.assign({}, presets[name], { paper: presets[name].paper != null ? presets[name].paper : (+ct.paper || 0), note: presets[name].note != null ? presets[name].note : (ct.note || ''), margin: presets[name].margin != null ? presets[name].margin : !!ct.margin })); App.refresh(); window.scrollTo(0, y); toast(name + ' 적용'); };
       pw.appendChild(b);
     });
     c9.appendChild(pw);
@@ -177,6 +177,15 @@ var SettingsView = (function () {
     });
     pf.style.marginTop = '12px';
     c9.appendChild(pf);
+    var NOTE = [['없음', ''], ['줄노트', 'lined'], ['모눈', 'grid'], ['점', 'dot']];
+    var nf = form(fSeg('노트 무늬', 'note', NOTE.map(function (x) { return x[0]; }), (NOTE.find(function (x) { return x[1] === (cur.note || ''); }) || NOTE[0])[0]) +
+      fSeg('왼쪽 여백선', 'margin', ['끔', '켬'], cur.margin ? '켬' : '끔'));
+    bindForm(nf);
+    nf.querySelector('[data-seg=note]').addEventListener('pick', function (e) {
+      cur.note = (NOTE.find(function (x) { return x[0] === e.detail; }) || NOTE[0])[1]; saveTheme(cur);
+    });
+    nf.querySelector('[data-seg=margin]').addEventListener('pick', function (e) { cur.margin = e.detail === '켬'; saveTheme(cur); });
+    c9.appendChild(nf);
     var th0 = h('<button type="button" class="btn full" style="margin-top:12px">기본 테마로</button>');
     th0.onclick = function () { var y = window.scrollY; delete Store.data.settings.theme; Store.touchSettings(); App.refresh(); window.scrollTo(0, y); };
     c9.appendChild(th0);

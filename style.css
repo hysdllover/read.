@@ -526,3 +526,22 @@ html.paper .card,html.paper .stat,html.paper .list,html.paper .sheet,html.paper 
 html.paper #topbar,html.paper #tabbar{background-image:var(--paper-card,none);}
 html.paper .card,html.paper .stat,html.paper .list{box-shadow:0 0 0 1px var(--line-2),0 1px 3px rgba(60,50,35,.06);}
 @media print{body,html.paper .card,html.paper .stat,html.paper .list{background-image:none !important;}}
+
+/* 노트 무늬 (설정 → 테마 색상) — 글 쓰는 곳에 줄/모눈/점, 왼쪽 여백선
+   줄노트는 글 상자 자체에 그려서 글줄마다 정확히 밑줄 */
+html.note-lined{--note-bg:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--lh,1.8em) - 1px),var(--rule) calc(var(--lh,1.8em) - 1px),var(--rule) var(--lh,1.8em));}
+html.note-grid{--note-bg:repeating-linear-gradient(to bottom,transparent 0,transparent 17px,var(--rule) 17px,var(--rule) 18px),repeating-linear-gradient(to right,transparent 0,transparent 17px,var(--rule) 17px,var(--rule) 18px);}
+html.note-dot{--note-bg:radial-gradient(circle,var(--rule) 0.9px,transparent 1.3px) 0 0/16px 16px;}
+html.note-margin{--note-margin:linear-gradient(to right,transparent 30px,var(--margin-line) 30px,var(--margin-line) 31px,transparent 31px);}
+/* 바탕(여백선 + 모눈/점 + 종이) */
+html[class*=note-] .notes .card,html[class*=note-] .rule-card,html[class*=note-] .list,html[class*=note-] .f textarea{
+  background-image:var(--note-margin,linear-gradient(transparent,transparent)),var(--paper-card,none);}
+html.note-grid .notes .card,html.note-grid .rule-card,html.note-grid .f textarea,html.note-dot .notes .card,html.note-dot .rule-card,html.note-dot .f textarea{
+  background-image:var(--note-margin,linear-gradient(transparent,transparent)),var(--note-bg),var(--paper-card,none);background-attachment:local,local,scroll;}
+/* 줄노트: 본문 글 상자에 밑줄 */
+html.note-lined .notes .item-body,html.note-lined .rule-body{--lh:1.9em;line-height:1.9;background-image:var(--note-bg);background-attachment:local;}
+html.note-lined .f textarea{--lh:1.7em;line-height:1.7;background-image:var(--note-margin,linear-gradient(transparent,transparent)),var(--note-bg),var(--paper-card,none);
+  background-position:0 0,0 10px,0 0;background-attachment:local,local,scroll;}
+html.note-margin .notes .card,html.note-margin .rule-card,html.note-margin .f textarea{padding-left:42px;}
+html.note-margin .rule-card{border-left:0 !important;}
+@media print{html[class*=note-] .card,html[class*=note-] .list,html[class*=note-] .item-body,html[class*=note-] .rule-body{background-image:none !important;}}
