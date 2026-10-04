@@ -80,6 +80,7 @@ var WidgetPreview = (function () {
     D.trace = function () { var g = this.g; g.beginPath(); this.p.ops.forEach(function (o) { g[o[0]].apply(g, o.slice(1)); }); };
     D.strokePath = function () { this.trace(); this.g.stroke(); };
     D.fillPath = function () { this.trace(); this.g.fill(); };
+    D.fillRect = function (r) { this.g.fillRect(r.x, r.y, r.w, r.h); };
     D.fillEllipse = function (r) { this.g.beginPath(); this.g.ellipse(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2, 0, 0, 7); this.g.fill(); };
     D.strokeEllipse = function (r) { this.g.beginPath(); this.g.ellipse(r.x + r.w / 2, r.y + r.h / 2, r.w / 2, r.h / 2, 0, 0, 7); this.g.stroke(); };
     D.drawTextInRect = function (t, r) {
@@ -155,6 +156,7 @@ var WidgetPreview = (function () {
       var st = makeStack(d, true);
       if (family === 'accessoryCircular') { d.style.alignItems = 'center'; d.style.justifyContent = 'center'; }
       Object.defineProperty(st, 'backgroundGradient', { set: function (g) { d.style.background = 'linear-gradient(180deg,' + g.colors.map(function (c) { return c.css; }).join(',') + ')'; } });
+      Object.defineProperty(st, 'backgroundImage', { set: function (c) { d.style.background = 'url(' + c.toDataURL() + ') center/cover'; } });
       Object.defineProperty(st, 'url', { set: function () { } });
       Object.defineProperty(st, 'refreshAfterDate', { set: function () { } });
       Object.defineProperty(st, 'addAccessoryWidgetBackground', { set: function (v) { if (v) d.style.background = 'rgba(255,255,255,.18)'; } });
@@ -206,6 +208,7 @@ var WidgetBuilder = (function () {
     shape: [['곡선', 'curve'], ['직선', 'line'], ['막대', 'bar'], ['점', 'dot']],
     style: [['기본', 'card'], ['배경', 'bg'], ['다크', 'dark'], ['컬러', 'color'], ['종이', 'paper'], ['파스텔', 'pastel'], ['직접', 'custom']],
     pad: [['좁게', 'tight'], ['보통', 'normal'], ['넓게', 'wide']],
+    texture: [['끔', 0], ['약하게', 1], ['보통', 2], ['진하게', 3]],
     align: [['왼쪽', 'left'], ['가운데', 'center']],
     textFont: [['시스템', 'sys'], ['둥근', 'round'], ['얇은 고딕', 'sdlight'], ['가는 고딕', 'sdthin'], ['명조', 'myungjo'], ['모노', 'mono']],
     numFont: [['시스템', 'sys'], ['둥근', 'round'], ['모노', 'mono'], ['헬베티카', 'helv'], ['아베니르', 'avenir'], ['디도', 'didot'], ['퓨추라', 'futura'], ['조지아', 'georgia'], ['옵티마', 'optima'], ['길 산스', 'gill']],
@@ -215,7 +218,7 @@ var WidgetBuilder = (function () {
   var SHOW = [['제목', 'title'], ['최근 값', 'value'], ['변화', 'delta'], ['목표', 'target'], ['점수', 'labels'], ['날짜', 'dates'], ['통계', 'stats'], ['시험명', 'exam']];
   var GROUPS = [
     ['kind', '종류', 'all'], ['metric', '지표', 'trend number summary goal'], ['count', '기록 수', 'trend number summary goal wrong recent'],
-    ['shape', '그래프 모양', 'trend number summary goal'], ['style', '디자인', 'all'], ['pad', '여백', 'all'], ['align', '정렬', 'number goal rule'],
+    ['shape', '그래프 모양', 'trend number summary goal'], ['style', '디자인', 'all'], ['texture', '종이 질감', 'all'], ['pad', '여백', 'all'], ['align', '정렬', 'number goal rule'],
     ['textFont', '한글 글꼴', 'all'], ['numFont', '숫자 글꼴', 'all'], ['weight', '숫자 굵기', 'all'], ['scale', '글자 크기', 'all']
   ];
   var DEF = {
@@ -299,7 +302,7 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
-  var SCRIPT_VER = 21;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
+  var SCRIPT_VER = 22;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();
