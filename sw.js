@@ -3,7 +3,7 @@
    파일을 고쳐 올릴 때 CACHE 숫자를 올리면 앱이 새 버전을 감지해 자동으로 새로고침합니다. */
 'use strict';
 
-var CACHE = 'kor-v18';
+var CACHE = 'kor-v19';
 var FILES = ['./', 'index.html', 'style.css', 'core.js', 'ui.js', 'sync.js',
   'view-home.js', 'view-reading.js', 'view-exam.js', 'view-genre.js', 'view-settings.js', 'view-report.js', 'widget-preview.js', 'widget.js',
   'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];

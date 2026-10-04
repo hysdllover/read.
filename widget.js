@@ -8,6 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
+const SCRIPT_VER = 19;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -32,7 +33,9 @@ function getConfig(s, param) {
   const list = Array.isArray(s.widgets) ? s.widgets : [];
   const p = String(param || '').trim();
   let c = list.find((x) => x.name === p) || (!p && list[0]) || null;
+  let missing = false;
   if (!c) {
+    missing = !!p && !p.split(/[\s,·/]+/).some((w) => OLD[w]);
     c = {};
     p.split(/[\s,·/]+/).forEach((w) => { if (OLD[w]) c[OLD[w][0]] = OLD[w][1]; });
     if (c.textFont === 'myungjo') c.numFont = 'didot';
@@ -40,6 +43,7 @@ function getConfig(s, param) {
   }
   const out = Object.assign({}, CFG_DEF, c);
   out.show = Object.assign({}, CFG_DEF.show, c.show || {});
+  out.missing = missing ? p : null;
   return out;
 }
 
@@ -298,15 +302,34 @@ function ringImg(frac, D, P, lw) {
 }
 
 // ---------- 위젯 조각 ----------
+// Scriptable(iOS)은 정렬을 안 정하면 가운데로 놓으므로, 모든 줄의 정렬을 직접 정한다.
+const HSET = new WeakSet(), LSET = new WeakSet(), CSET = new WeakSet();
+function hz(st) { st.layoutHorizontally(); HSET.add(st); return st; }
+function vt(st) { st.layoutVertically(); st.topAlignContent(); LSET.add(st); return st; }   // 세로 스택: 왼쪽 정렬
+function vbox(parent, center) {   // 위젯 바탕에 세로 묶음을 왼쪽(또는 가운데)에 놓기
+  const r = hz(parent.addStack());
+  if (center) r.addSpacer();
+  const v = r.addStack(); v.layoutVertically();
+  if (center) { v.centerAlignContent(); CSET.add(v); } else { v.topAlignContent(); LSET.add(v); }
+  r.addSpacer();
+  return v;
+}
 function text(st, s, font, color, lines) {
-  const t = st.addText(String(s));
+  let host = st, row = null;
+  if (!HSET.has(st) && !LSET.has(st)) {   // 바탕·가운데 묶음에 바로 넣는 글은 줄로 감싸 정렬
+    row = hz(st.addStack());
+    if (CSET.has(st)) row.addSpacer();
+    host = row;
+  }
+  const t = host.addText(String(s));
   t.font = font; t.textColor = C(color);
   if (lines) t.lineLimit = lines;
+  if (row) row.addSpacer();
   return t;
 }
 function header(w, title, right, ctx) {
   if (!ctx.cfg.show.title && !right) return null;
-  const top = w.addStack(); top.layoutHorizontally(); top.centerAlignContent();
+  const top = w.addStack(); hz(top); top.centerAlignContent();
   if (ctx.cfg.show.title) text(top, title, ctx.F.txt(10), ctx.P.sub);
   top.addSpacer();
   if (right) text(top, right, ctx.F.txt(9.5), ctx.P.accent);
@@ -320,7 +343,7 @@ const lastName = (e) => (e && (e.name || e.org)) || '';
 function bigValue(st, ctx, S, size) {
   const { P, F, cfg, s } = ctx;
   const last = S.rows[S.rows.length - 1], prev = S.rows[S.rows.length - 2];
-  const row = st.addStack(); row.layoutHorizontally(); row.bottomAlignContent();
+  const row = st.addStack(); hz(row); row.bottomAlignContent();
   const v = last ? S.M.get(last) : null;
   text(row, v == null ? '–' : v, F.num(size), P.text);
   if (S.M.unit) text(row, ' ' + S.M.unit, F.txt(10), P.sub);
@@ -332,6 +355,7 @@ function bigValue(st, ctx, S, size) {
     const ok = hitOf(S.M, v, tg);
     text(row, ok ? '목표 달성' : '목표 ' + tg + S.M.unit, F.txt(9), ok ? P.good : P.bad);
   }
+  row.addSpacer();
   return row;
 }
 
@@ -353,10 +377,10 @@ function trend(w, ctx) {
     w.addSpacer(8);
     const all = S.all.map((e) => +S.M.get(e));
     const best = S.M.invert ? Math.min(...all) : Math.max(...all), worst = S.M.invert ? Math.max(...all) : Math.min(...all);
-    const st = w.addStack(); st.layoutHorizontally();
+    const st = w.addStack(); hz(st);
     [['평균', avg(all)], ['최고', best], ['최저', worst], ['기록', all.length + '회']].forEach((kv, i) => {
       if (i) st.addSpacer();
-      const c = st.addStack(); c.layoutVertically();
+      const c = st.addStack(); vt(c);
       text(c, kv[0], F.txt(8.5), P.faint);
       text(c, kv[1], F.num(15), P.text);
     });
@@ -368,17 +392,16 @@ function number(w, ctx) {
   const S = series(ctx, cfg.metric, cfg.count || 0);
   const last = S.rows[S.rows.length - 1];
   const center = cfg.align === 'center';
-  const body = w.addStack(); body.layoutVertically();
-  if (center) body.centerAlignContent();
+  const body = vbox(w, center);
   if (cfg.show.title) text(body, S.M.title, F.txt(10.5), P.sub);
   body.addSpacer(fam === 'small' ? 2 : 4);
-  const vrow = body.addStack(); vrow.layoutHorizontally(); vrow.bottomAlignContent();
+  const vrow = body.addStack(); hz(vrow); vrow.bottomAlignContent();
   const v = last ? S.M.get(last) : null;
   text(vrow, v == null ? '–' : v, F.num(fam === 'small' ? 52 : fam === 'large' ? 84 : 60), P.text);
   if (S.M.unit) text(vrow, S.M.unit, F.txt(fam === 'small' ? 11 : 13), P.sub);
   const prev = S.rows[S.rows.length - 2];
   const d = cfg.show.delta && last && prev ? delta(v, S.M.get(prev), S.M.invert) : null;
-  const info = body.addStack(); info.layoutHorizontally();
+  const info = body.addStack(); hz(info);
   if (d) { text(info, d.s + ' 지난번 대비', F.txt(9.5), d.good ? P.good : P.bad); }
   const tg = S.M.target(s);
   if (cfg.show.target && tg != null && last) {
@@ -405,16 +428,16 @@ function summary(w, ctx) {
   const keys = fam === 'small' ? ['raw', 'pct', 'grade'] : ['raw', 'pct', 'grade', 'wrong'];
   const cell = (st, key, big) => {
     const M = METRICS[key];
-    const c = st.addStack(); c.layoutVertically();
+    const c = HSET.has(st) ? vt(st.addStack()) : vbox(st);
     text(c, M.title, F.txt(8.5), P.faint);
-    const r = c.addStack(); r.layoutHorizontally(); r.bottomAlignContent();
+    const r = c.addStack(); hz(r); r.bottomAlignContent();
     const v = M.get(last);
     text(r, v == null ? '–' : v, F.num(big), P.text);
     const d = cfg.show.delta ? delta(v, M.get(prev), M.invert) : null;
     if (d) { r.addSpacer(3); text(r, d.s, F.num(8, 're'), d.good ? P.good : P.bad); }
   };
   if (fam === 'small') { keys.forEach((k, i) => { if (i) w.addSpacer(3); cell(w, k, 19); }); w.addSpacer(); return; }
-  const row = w.addStack(); row.layoutHorizontally();
+  const row = w.addStack(); hz(row);
   keys.forEach((k, i) => { if (i) row.addSpacer(); cell(row, k, 24); });
   w.addSpacer();
   const S = series(ctx, cfg.metric, fam === 'large' ? (cfg.count || 0) : Math.min(cfg.count || 10, 10));
@@ -444,13 +467,13 @@ function goal(w, ctx) {
   const last = S.rows[S.rows.length - 1];
   header(w, S.M.title + ' 목표 달성', fam !== 'small' && tg != null ? '목표 ' + tg + S.M.unit : '', ctx);
   w.addSpacer(fam === 'small' ? 4 : 8);
-  const row = w.addStack(); row.layoutHorizontally(); row.centerAlignContent();
+  const row = w.addStack(); hz(row); row.centerAlignContent();
   if (cfg.align === 'center') row.addSpacer();
   const D = fam === 'small' ? 78 : fam === 'large' ? 130 : 92;
   image(row, ringImg(frac, D, P, fam === 'large' ? 9 : 7), D, D);
   row.addSpacer(fam === 'small' ? 10 : 16);
-  const info = row.addStack(); info.layoutVertically();
-  const pr = info.addStack(); pr.layoutHorizontally(); pr.bottomAlignContent();
+  const info = row.addStack(); vt(info);
+  const pr = info.addStack(); hz(pr); pr.bottomAlignContent();
   text(pr, Math.round(frac * 100), F.num(fam === 'small' ? 26 : 34), P.text);
   text(pr, '%', F.txt(10), P.sub);
   text(info, '달성 ' + hits + '/' + S.rows.length + '회', F.txt(9.5), P.sub);
@@ -476,7 +499,7 @@ function recent(w, ctx) {
   w.addSpacer(5);
   if (!rows.length) { text(w, '기록이 없습니다', F.txt(10), P.sub); return; }
   if (fam !== 'small') {
-    const hd = w.addStack(); hd.layoutHorizontally();
+    const hd = w.addStack(); hz(hd);
     const c0 = hd.addStack(); c0.size = new Size(cfg.show.exam ? 130 : 60, 0); text(c0, '시행일', F.txt(8), P.faint);
     hd.addSpacer();
     ['원점수', '백분위', '등급'].forEach((k) => { const c = hd.addStack(); c.size = new Size(44, 0); hd.addSpacer(0); text(c, k, F.txt(8), P.faint); });
@@ -484,7 +507,7 @@ function recent(w, ctx) {
   }
   rows.forEach((e, i) => {
     if (i) w.addSpacer(fam === 'large' ? 6 : 3);
-    const r = w.addStack(); r.layoutHorizontally(); r.centerAlignContent();
+    const r = w.addStack(); hz(r); r.centerAlignContent();
     if (fam === 'small') {
       text(r, shortDate(e.date), F.num(10, 're'), P.sub);
       r.addSpacer();
@@ -493,7 +516,7 @@ function recent(w, ctx) {
       text(r, e.grade == null ? '–' : e.grade + '등급', F.txt(9.5), P.sub);
       return;
     }
-    const c0 = r.addStack(); c0.size = new Size(cfg.show.exam ? 130 : 60, 0); c0.layoutHorizontally();
+    const c0 = r.addStack(); c0.size = new Size(cfg.show.exam ? 130 : 60, 0); hz(c0);
     text(c0, shortDate(e.date), F.num(10.5, 're'), P.sub);
     if (cfg.show.exam) { c0.addSpacer(6); text(c0, lastName(e), F.txt(10), P.text, 1); }
     r.addSpacer();
@@ -508,7 +531,7 @@ function wrong(w, ctx) {
   const cols = keys.map((k) => (s.colors || {})['영역:' + k] || AREA_DEF[k]);
   const N = cfg.count === 0 ? exams.length : (fam === 'small' ? Math.min(cfg.count, 5) : cfg.count);
   const rows = exams.slice(-N);
-  const lg = header(w, '영역별 오답', '', ctx) || w.addStack();
+  const lg = header(w, '영역별 오답', '', ctx) || (() => { const r = hz(w.addStack()); r.addSpacer(); return r; })();
   if (fam !== 'small') {
     keys.forEach((k, i) => {
       lg.addSpacer(6);
@@ -522,7 +545,7 @@ function wrong(w, ctx) {
   image(w, stackImg(rows.map((e) => keys.map((k) => +((e.w || {})[k]) || 0)), rows.map((e) => shortDate(e.date)), cols, { W: chartW(fam), H, P, F, dates: cfg.show.dates && fam !== 'small', values: cfg.show.labels }), chartW(fam), H);
   w.addSpacer();
   if (fam !== 'small' && cfg.show.stats) {
-    const av = w.addStack(); av.layoutHorizontally();
+    const av = w.addStack(); hz(av);
     keys.forEach((k, i) => {
       if (i) av.addSpacer();
       text(av, k + ' 평균 ', F.txt(8.5), P.faint);
@@ -548,10 +571,10 @@ function weak(w, ctx) {
   const BW = fam === 'small' ? 46 : 190;
   list.forEach((x, i) => {
     if (i) w.addSpacer(fam === 'large' ? 9 : 5);
-    const r = w.addStack(); r.layoutHorizontally(); r.centerAlignContent();
+    const r = w.addStack(); hz(r); r.centerAlignContent();
     const lb = r.addStack(); lb.size = new Size(fam === 'small' ? 40 : 56, 0); text(lb, x.g, F.txt(9.5), P.sub, 1);
     r.addSpacer(4);
-    const track = r.addStack(); track.size = new Size(BW, 4); track.cornerRadius = 2; track.backgroundColor = C(P.track); track.layoutHorizontally();
+    const track = r.addStack(); track.size = new Size(BW, 4); track.cornerRadius = 2; track.backgroundColor = C(P.track); hz(track);
     const fill = track.addStack(); fill.size = new Size(Math.max(3, BW * x.r), 4); fill.cornerRadius = 2;
     fill.backgroundColor = C((s.colors || {})[x.g] || P.bad);
     track.addSpacer();
@@ -566,9 +589,11 @@ function rule(w, ctx) {
   const rl = [...exams].reverse().find((e) => e.rule);
   header(w, '다음 시험 행동강령', rl && fam !== 'small' && cfg.show.exam ? lastName(rl) : '', ctx);
   w.addSpacer(3);
-  const dot = w.addStack(); dot.size = new Size(14, 2); dot.cornerRadius = 1; dot.backgroundColor = C(P.hl);
+  const dr = hz(w.addStack());
+  const dot = dr.addStack(); dot.size = new Size(14, 2); dot.cornerRadius = 1; dot.backgroundColor = C(P.hl);
+  dr.addSpacer();
   w.addSpacer(7);
-  const t = text(w, rl ? rl.rule : '모의고사 기록에 행동강령을 적어 보세요', F.txt(fam === 'small' ? 11 : fam === 'large' ? 15 : 12.5), rl ? P.text : P.sub, fam === 'small' ? 7 : fam === 'large' ? 16 : 5);
+  const t = text(cfg.align === 'center' ? vbox(w, true) : w, rl ? rl.rule : '모의고사 기록에 행동강령을 적어 보세요', F.txt(fam === 'small' ? 11 : fam === 'large' ? 15 : 12.5), rl ? P.text : P.sub, fam === 'small' ? 7 : fam === 'large' ? 16 : 5);
   if (cfg.align === 'center') t.centerAlignText();
   w.addSpacer();
 }
@@ -578,10 +603,10 @@ function rule(w, ctx) {
 const SZ = { s: 0, m: 1, l: 2 };
 const pick3 = (v, a) => a[SZ[v] == null ? 1 : SZ[v]];
 function alignRow(st, center, fn) {
-  const r = st.addStack(); r.layoutHorizontally(); r.bottomAlignContent();
+  const r = st.addStack(); hz(r); r.bottomAlignContent();
   if (center) r.addSpacer();
   fn(r);
-  if (center) r.addSpacer();
+  r.addSpacer();
   return r;
 }
 const BLOCKS = {
@@ -624,13 +649,13 @@ const BLOCKS = {
     const { P, F, exams, fam } = ctx;
     const last = exams[exams.length - 1] || {}, prev = exams[exams.length - 2] || {};
     const keys = (b.keys && b.keys.length ? b.keys : ['raw', 'pct', 'grade']).slice(0, fam === 'small' ? 2 : 4);
-    const row = w.addStack(); row.layoutHorizontally();
+    const row = w.addStack(); hz(row);
     keys.forEach((k, i) => {
       if (i) row.addSpacer();
       const M = METRICS[k] || METRICS.raw;
-      const c = row.addStack(); c.layoutVertically();
+      const c = row.addStack(); vt(c);
       text(c, M.title, F.txt(8.5), P.faint);
-      const r = c.addStack(); r.layoutHorizontally(); r.bottomAlignContent();
+      const r = c.addStack(); hz(r); r.bottomAlignContent();
       const v = M.get(last);
       text(r, v == null ? '–' : v, F.num(pick3(b.size, [15, 21, 27])), P.text);
       const d = b.delta !== false ? delta(v, M.get(prev), M.invert) : null;
@@ -642,24 +667,24 @@ const BLOCKS = {
     const key = METRICS[b.metric] && METRICS[b.metric].target(s) != null ? b.metric : (s.targetPct != null ? 'pct' : 'grade');
     const S = series(ctx, key, 0), tg = S.M.target(s);
     const hits = S.rows.filter((e) => hitOf(S.M, +S.M.get(e), tg)).length, frac = S.rows.length ? hits / S.rows.length : 0;
-    const row = w.addStack(); row.layoutHorizontally(); row.centerAlignContent();
+    const row = w.addStack(); hz(row); row.centerAlignContent();
     if (b.align === 'center') row.addSpacer();
     const D = pick3(b.size, fam === 'small' ? [44, 60, 76] : [52, 72, 96]);
     image(row, ringImg(frac, D, P, D > 70 ? 8 : 6), D, D);
     row.addSpacer(10);
-    const info = row.addStack(); info.layoutVertically();
+    const info = row.addStack(); vt(info);
     text(info, S.M.title + ' 목표 ' + (tg == null ? '–' : tg + S.M.unit), F.txt(9), P.sub);
-    const pr = info.addStack(); pr.layoutHorizontally(); pr.bottomAlignContent();
+    const pr = info.addStack(); hz(pr); pr.bottomAlignContent();
     text(pr, Math.round(frac * 100), F.num(pick3(b.size, [18, 24, 32])), P.text); text(pr, '%', F.txt(9), P.sub);
     text(info, '달성 ' + hits + '/' + S.rows.length + '회', F.txt(8.5), P.faint);
-    if (b.align === 'center') row.addSpacer();
+    row.addSpacer();
   },
   recent(w, ctx, b) {
     const { P, F, exams, fam } = ctx;
     const rows = exams.slice(-(b.n || 3)).reverse();
     rows.forEach((e, i) => {
       if (i) w.addSpacer(3);
-      const r = w.addStack(); r.layoutHorizontally(); r.centerAlignContent();
+      const r = w.addStack(); hz(r); r.centerAlignContent();
       text(r, shortDate(e.date), F.num(10, 're'), P.sub);
       if (fam !== 'small' && b.exam !== false) { r.addSpacer(6); text(r, lastName(e), F.txt(10), P.text, 1); }
       r.addSpacer();
@@ -686,10 +711,10 @@ const BLOCKS = {
     const BW = fam === 'small' ? 46 : 190;
     list.forEach((x, i) => {
       if (i) w.addSpacer(4);
-      const r = w.addStack(); r.layoutHorizontally(); r.centerAlignContent();
+      const r = w.addStack(); hz(r); r.centerAlignContent();
       const lb = r.addStack(); lb.size = new Size(fam === 'small' ? 40 : 56, 0); text(lb, x.g, F.txt(9.5), P.sub, 1);
       r.addSpacer(4);
-      const track = r.addStack(); track.size = new Size(BW, 4); track.cornerRadius = 2; track.backgroundColor = C(P.track); track.layoutHorizontally();
+      const track = r.addStack(); track.size = new Size(BW, 4); track.cornerRadius = 2; track.backgroundColor = C(P.track); hz(track);
       const fill = track.addStack(); fill.size = new Size(Math.max(3, BW * x.r), 4); fill.cornerRadius = 2; fill.backgroundColor = C((s.colors || {})[x.g] || P.bad);
       track.addSpacer();
       r.addSpacer();
@@ -699,16 +724,16 @@ const BLOCKS = {
   rule(w, ctx, b) {
     const { P, F, exams } = ctx;
     const rl = [...exams].reverse().find((e) => e.rule);
-    const t = text(w, rl ? rl.rule : '모의고사 기록에 행동강령을 적어 보세요', F.txt(pick3(b.size, [10.5, 12.5, 15])), rl ? P.text : P.sub, b.lines || 4);
+    const t = text(b.align === 'center' ? vbox(w, true) : w, rl ? rl.rule : '모의고사 기록에 행동강령을 적어 보세요', F.txt(pick3(b.size, [10.5, 12.5, 15])), rl ? P.text : P.sub, b.lines || 4);
     if (b.align === 'center') t.centerAlignText();
   },
   note(w, ctx, b) {
     const { P, F } = ctx;
-    const t = text(w, b.text || '', F.txt(pick3(b.size, [10.5, 13, 17]), b.bold ? 'se' : 're'), b.color === 'text' ? P.text : b.color === 'sub' ? P.sub : P.hl, 3);
+    const t = text(b.align === 'center' ? vbox(w, true) : w, b.text || '', F.txt(pick3(b.size, [10.5, 13, 17]), b.bold ? 'se' : 're'), b.color === 'text' ? P.text : b.color === 'sub' ? P.sub : P.hl, 3);
     if (b.align === 'center') t.centerAlignText();
   },
   line(w, ctx) {
-    const l = w.addStack(); l.size = new Size(ctx.fam === 'small' ? 130 : 300, 1); l.backgroundColor = C(ctx.P.line);
+    const lr = hz(w.addStack()); const l = lr.addStack(); l.size = new Size(ctx.fam === 'small' ? 130 : 300, 1); l.backgroundColor = C(ctx.P.line); lr.addSpacer();
   },
   gap(w, ctx, b) { if (b.flex) w.addSpacer(); else w.addSpacer(pick3(b.size, [4, 10, 20])); }
 };
@@ -744,7 +769,7 @@ function lock(w, ctx) {
     const b = w.addText(v == null ? '–' : String(v)); b.font = F.num(22); b.textColor = White; b.centerAlignText(); b.minimumScaleFactor = 0.5;
     return;
   }
-  const top = w.addStack(); top.layoutHorizontally();
+  const top = w.addStack(); hz(top);
   const tt = top.addText(S.M.title); tt.font = F.txt(10);
   top.addSpacer();
   const vv = top.addText(v == null ? '–' : v + S.M.unit); vv.font = F.num(13, 'me');
@@ -787,6 +812,10 @@ async function build(param) {
   const pd = { tight: [9, 11], normal: [13, 15], wide: [18, 20] }[cfg.pad] || [13, 15];
   w.setPadding(pd[0], pd[1], pd[0] - 2, pd[1]);
   (KINDS[cfg.kind] || trend)(w, ctx);
+  /* 안내: 스크립트가 예전 판이거나, Parameter 이름의 위젯을 못 찾았을 때 */
+  const note = (s.widgetScriptVer || 0) > SCRIPT_VER ? '앱에서 스크립트를 다시 복사해 주세요'
+    : cfg.missing ? '‘' + cfg.missing + '’ 위젯을 못 찾음 · 앱에서 이름 확인 후 동기화' : '';
+  if (note) { const t = text(w, note, Font.systemFont(8), ctx.P.bad, 1); t.minimumScaleFactor = 0.7; }
   return w;
 }
 
