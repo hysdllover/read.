@@ -16,7 +16,9 @@ const AREA_DEF = { '독서': '#5b6b85', '문학': '#8f8aae', '선택': '#b3a78a'
 // ---------- 위젯 구성 ----------
 const CFG_DEF = {
   kind: 'trend', metric: 'grade', count: 10, shape: 'curve', style: 'card', align: 'left',
-  textFont: 'sys', numFont: 'sys', weight: 'light', scale: 1,
+  textFont: 'sys', numFont: 'sys', weight: 'light', scale: 1, pad: 'normal',
+  design: null,   // style 'custom'일 때 {bg, bg2, grad, text, accent, good, bad, hl}
+  blocks: null,   // kind 'custom'일 때 구성요소 목록
   show: { title: true, value: true, delta: true, target: true, labels: true, dates: true, stats: true, exam: true }
 };
 // 예전 방식(낱말) Parameter도 읽기: 예) 백분위 다크 명조
@@ -81,10 +83,13 @@ async function load() {
 const C = (hex, a) => new Color(hex, a == null ? 1 : a);
 function rgb(h) { h = String(h || '#000').replace('#', ''); if (h.length === 3) h = h.replace(/./g, '$&$&'); return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16) || 0); }
 function mix(a, b, t) { const x = rgb(a), y = rgb(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
-function palette(theme, style) {
+function palette(theme, style, design) {
   const t = Object.assign({}, DEF, theme || {});
   let p;
-  if (style === 'dark') p = { bg: '#1c2029', text: '#e6e7ec', accent: mix(t.accent, '#ffffff', 0.35), good: mix(t.good, '#ffffff', 0.3), bad: mix(t.bad, '#ffffff', 0.25), hl: mix(t.hl, '#ffffff', 0.3) };
+  if (style === 'custom') {
+    const d = Object.assign({ bg: t.card, text: t.text, accent: t.accent, good: t.good, bad: t.bad, hl: t.hl }, design || {});
+    p = { bg: d.bg, text: d.text, accent: d.accent, good: d.good, bad: d.bad, hl: d.hl };
+  } else if (style === 'dark') p = { bg: '#1c2029', text: '#e6e7ec', accent: mix(t.accent, '#ffffff', 0.35), good: mix(t.good, '#ffffff', 0.3), bad: mix(t.bad, '#ffffff', 0.25), hl: mix(t.hl, '#ffffff', 0.3) };
   else if (style === 'color') p = { bg: t.accent, text: '#ffffff', accent: '#ffffff', good: mix(t.good, '#ffffff', 0.65), bad: mix(t.bad, '#ffffff', 0.6), hl: '#ffffff' };
   else if (style === 'paper') p = { bg: '#f6f2e9', text: '#2c2a25', accent: mix(t.accent, '#2c2a25', 0.15), good: t.good, bad: t.bad, hl: t.hl };
   else if (style === 'pastel') p = { bg: mix(t.accent, '#ffffff', 0.86), text: mix(t.accent, '#15171c', 0.75), accent: t.accent, good: t.good, bad: t.bad, hl: t.hl };
@@ -568,6 +573,155 @@ function rule(w, ctx) {
   w.addSpacer();
 }
 
+
+// ---------- 직접 구성 (구성요소 블록) ----------
+const SZ = { s: 0, m: 1, l: 2 };
+const pick3 = (v, a) => a[SZ[v] == null ? 1 : SZ[v]];
+function alignRow(st, center, fn) {
+  const r = st.addStack(); r.layoutHorizontally(); r.bottomAlignContent();
+  if (center) r.addSpacer();
+  fn(r);
+  if (center) r.addSpacer();
+  return r;
+}
+const BLOCKS = {
+  title(w, ctx, b) {
+    const { P, F } = ctx;
+    alignRow(w, b.align === 'center', (r) => {
+      text(r, b.text || '국어', F.txt(pick3(b.size, [10, 13, 17]), b.bold ? 'se' : 're'), b.color === 'accent' ? P.accent : b.color === 'text' ? P.text : P.sub, 1);
+    });
+  },
+  big(w, ctx, b) {
+    const { P, F, s } = ctx;
+    const S = series(ctx, b.metric || 'pct', 0);
+    const last = S.rows[S.rows.length - 1], prev = S.rows[S.rows.length - 2];
+    const v = last ? S.M.get(last) : null;
+    if (b.label !== false) alignRow(w, b.align === 'center', (r) => text(r, S.M.title, F.txt(9.5), P.sub));
+    alignRow(w, b.align === 'center', (r) => {
+      text(r, v == null ? '–' : v, F.num(pick3(b.size, [28, 42, 60])), P.text);
+      if (S.M.unit) text(r, ' ' + S.M.unit, F.txt(10), P.sub);
+      const d = b.delta !== false && last && prev ? delta(v, S.M.get(prev), S.M.invert) : null;
+      if (d) { r.addSpacer(5); text(r, d.s, F.num(9, 're'), d.good ? P.good : P.bad); }
+      const tg = S.M.target(s);
+      if (b.target !== false && tg != null && last) {
+        r.addSpacer(6);
+        const ok = hitOf(S.M, v, tg);
+        text(r, ok ? '목표 달성' : '목표 ' + tg + S.M.unit, F.txt(9), ok ? P.good : P.bad);
+      }
+    });
+  },
+  chart(w, ctx, b) {
+    const { P, F, s, fam } = ctx;
+    const S = series(ctx, b.metric || 'grade', b.count == null ? (fam === 'small' ? 6 : 10) : b.count);
+    if (!S.rows.length) { text(w, '기록이 없습니다', F.txt(9.5), P.sub); return; }
+    const H = pick3(b.h, fam === 'small' ? [34, 52, 80] : [40, 70, 120]);
+    image(w, chartImg(S.vals, S.labels, {
+      W: chartW(fam), H, P, F, target: b.target !== false ? S.M.target(s) : null, invert: S.M.invert, shape: b.shape || 'curve',
+      values: b.labels !== false, dates: b.dates !== false && fam !== 'small'
+    }), chartW(fam), H);
+  },
+  tiles(w, ctx, b) {
+    const { P, F, exams, fam } = ctx;
+    const last = exams[exams.length - 1] || {}, prev = exams[exams.length - 2] || {};
+    const keys = (b.keys && b.keys.length ? b.keys : ['raw', 'pct', 'grade']).slice(0, fam === 'small' ? 2 : 4);
+    const row = w.addStack(); row.layoutHorizontally();
+    keys.forEach((k, i) => {
+      if (i) row.addSpacer();
+      const M = METRICS[k] || METRICS.raw;
+      const c = row.addStack(); c.layoutVertically();
+      text(c, M.title, F.txt(8.5), P.faint);
+      const r = c.addStack(); r.layoutHorizontally(); r.bottomAlignContent();
+      const v = M.get(last);
+      text(r, v == null ? '–' : v, F.num(pick3(b.size, [15, 21, 27])), P.text);
+      const d = b.delta !== false ? delta(v, M.get(prev), M.invert) : null;
+      if (d) { r.addSpacer(3); text(r, d.s, F.num(8, 're'), d.good ? P.good : P.bad); }
+    });
+  },
+  ring(w, ctx, b) {
+    const { P, F, s, fam } = ctx;
+    const key = METRICS[b.metric] && METRICS[b.metric].target(s) != null ? b.metric : (s.targetPct != null ? 'pct' : 'grade');
+    const S = series(ctx, key, 0), tg = S.M.target(s);
+    const hits = S.rows.filter((e) => hitOf(S.M, +S.M.get(e), tg)).length, frac = S.rows.length ? hits / S.rows.length : 0;
+    const row = w.addStack(); row.layoutHorizontally(); row.centerAlignContent();
+    if (b.align === 'center') row.addSpacer();
+    const D = pick3(b.size, fam === 'small' ? [44, 60, 76] : [52, 72, 96]);
+    image(row, ringImg(frac, D, P, D > 70 ? 8 : 6), D, D);
+    row.addSpacer(10);
+    const info = row.addStack(); info.layoutVertically();
+    text(info, S.M.title + ' 목표 ' + (tg == null ? '–' : tg + S.M.unit), F.txt(9), P.sub);
+    const pr = info.addStack(); pr.layoutHorizontally(); pr.bottomAlignContent();
+    text(pr, Math.round(frac * 100), F.num(pick3(b.size, [18, 24, 32])), P.text); text(pr, '%', F.txt(9), P.sub);
+    text(info, '달성 ' + hits + '/' + S.rows.length + '회', F.txt(8.5), P.faint);
+    if (b.align === 'center') row.addSpacer();
+  },
+  recent(w, ctx, b) {
+    const { P, F, exams, fam } = ctx;
+    const rows = exams.slice(-(b.n || 3)).reverse();
+    rows.forEach((e, i) => {
+      if (i) w.addSpacer(3);
+      const r = w.addStack(); r.layoutHorizontally(); r.centerAlignContent();
+      text(r, shortDate(e.date), F.num(10, 're'), P.sub);
+      if (fam !== 'small' && b.exam !== false) { r.addSpacer(6); text(r, lastName(e), F.txt(10), P.text, 1); }
+      r.addSpacer();
+      text(r, e.raw == null ? '–' : e.raw, F.num(12.5), P.text);
+      if (fam !== 'small') { r.addSpacer(10); text(r, e.pct == null ? '–' : e.pct, F.num(12.5), P.text); }
+      r.addSpacer(8);
+      text(r, e.grade == null ? '–' : e.grade + '등급', F.txt(9.5), P.sub);
+    });
+  },
+  wrong(w, ctx, b) {
+    const { P, F, s, fam, exams } = ctx;
+    const keys = ['독서', '문학', '선택'];
+    const cols = keys.map((k) => (s.colors || {})['영역:' + k] || AREA_DEF[k]);
+    const rows = exams.slice(-(b.count || (fam === 'small' ? 5 : 10)));
+    if (!rows.length) return;
+    const H = pick3(b.h, fam === 'small' ? [40, 60, 90] : [44, 74, 120]);
+    image(w, stackImg(rows.map((e) => keys.map((k) => +((e.w || {})[k]) || 0)), rows.map((e) => shortDate(e.date)), cols, { W: chartW(fam), H, P, F, dates: b.dates !== false && fam !== 'small', values: b.labels !== false }), chartW(fam), H);
+  },
+  weak(w, ctx, b) {
+    const { P, F, s, fam, data } = ctx;
+    const by = {};
+    (data.passages || []).forEach((p) => { if (!p.genre) return; const o = by[p.genre] || (by[p.genre] = { q: 0, w: 0 }); o.q += +p.qn || 0; o.w += +p.wrong || 0; });
+    const list = Object.keys(by).filter((g) => by[g].q >= 4).map((g) => ({ g, r: by[g].w / by[g].q })).sort((a, c) => c.r - a.r).slice(0, b.n || 3);
+    const BW = fam === 'small' ? 46 : 190;
+    list.forEach((x, i) => {
+      if (i) w.addSpacer(4);
+      const r = w.addStack(); r.layoutHorizontally(); r.centerAlignContent();
+      const lb = r.addStack(); lb.size = new Size(fam === 'small' ? 40 : 56, 0); text(lb, x.g, F.txt(9.5), P.sub, 1);
+      r.addSpacer(4);
+      const track = r.addStack(); track.size = new Size(BW, 4); track.cornerRadius = 2; track.backgroundColor = C(P.track); track.layoutHorizontally();
+      const fill = track.addStack(); fill.size = new Size(Math.max(3, BW * x.r), 4); fill.cornerRadius = 2; fill.backgroundColor = C((s.colors || {})[x.g] || P.bad);
+      track.addSpacer();
+      r.addSpacer();
+      text(r, Math.round(x.r * 100) + '%', F.num(10.5, 're'), P.text);
+    });
+  },
+  rule(w, ctx, b) {
+    const { P, F, exams } = ctx;
+    const rl = [...exams].reverse().find((e) => e.rule);
+    const t = text(w, rl ? rl.rule : '모의고사 기록에 행동강령을 적어 보세요', F.txt(pick3(b.size, [10.5, 12.5, 15])), rl ? P.text : P.sub, b.lines || 4);
+    if (b.align === 'center') t.centerAlignText();
+  },
+  note(w, ctx, b) {
+    const { P, F } = ctx;
+    const t = text(w, b.text || '', F.txt(pick3(b.size, [10.5, 13, 17]), b.bold ? 'se' : 're'), b.color === 'text' ? P.text : b.color === 'sub' ? P.sub : P.hl, 3);
+    if (b.align === 'center') t.centerAlignText();
+  },
+  line(w, ctx) {
+    const l = w.addStack(); l.size = new Size(ctx.fam === 'small' ? 130 : 300, 1); l.backgroundColor = C(ctx.P.line);
+  },
+  gap(w, ctx, b) { if (b.flex) w.addSpacer(); else w.addSpacer(pick3(b.size, [4, 10, 20])); }
+};
+function custom(w, ctx) {
+  const list = ctx.cfg.blocks && ctx.cfg.blocks.length ? ctx.cfg.blocks : [{ t: 'title', text: '국어' }, { t: 'big', metric: 'pct' }, { t: 'chart', metric: 'grade' }];
+  const flex = list.some((b) => b.t === 'gap' && b.flex);
+  list.forEach((b, i) => {
+    if (i && b.t !== 'gap' && list[i - 1].t !== 'gap') w.addSpacer(ctx.fam === 'small' ? 4 : 6);
+    (BLOCKS[b.t] || (() => {}))(w, ctx, b);
+  });
+  if (!flex) w.addSpacer();
+}
+
 // ---------- 잠금 화면 ----------
 function lock(w, ctx) {
   const { F, fam, cfg } = ctx;
@@ -602,7 +756,7 @@ function lock(w, ctx) {
 }
 
 // ---------- 조립 ----------
-const KINDS = { trend, number, summary, goal, recent, wrong, weak, rule };
+const KINDS = { trend, number, summary, goal, recent, wrong, weak, rule, custom };
 async function build(param) {
   const fam = config.widgetFamily || 'medium';
   const w = new ListWidget();
@@ -622,9 +776,16 @@ async function build(param) {
   const exams = (data.exams || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const ctx = { cfg, fam, s, exams, data, F: fonts(cfg) };
   if (fam.indexOf('accessory') === 0) { lock(w, ctx); return w; }
-  ctx.P = palette(s.theme, cfg.style);
+  ctx.P = palette(s.theme, cfg.style, cfg.design);
   w.backgroundColor = C(ctx.P.bg);
-  w.setPadding(13, 15, 11, 15);
+  if (cfg.style === 'custom' && cfg.design && cfg.design.grad && cfg.design.bg2) {
+    const g = new LinearGradient();
+    g.colors = [C(ctx.P.bg), C(cfg.design.bg2)];
+    g.locations = [0, 1];
+    w.backgroundGradient = g;
+  }
+  const pd = { tight: [9, 11], normal: [13, 15], wide: [18, 20] }[cfg.pad] || [13, 15];
+  w.setPadding(pd[0], pd[1], pd[0] - 2, pd[1]);
   (KINDS[cfg.kind] || trend)(w, ctx);
   return w;
 }

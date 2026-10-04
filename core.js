@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v17';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v18';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -290,6 +290,9 @@ var App = {
   refresh: function () {
     if (CODE === null) return;
     var cur = this.view();
+    /* 같은 화면을 다시 그릴 때는 보던 위치 유지 (탭을 옮길 때만 맨 위로) */
+    var same = this._shown === cur.id, y = window.scrollY;
+    this._shown = cur.id;
     this.route = cur.id;
     applyTheme();
     var old = document.getElementById('main');
@@ -307,7 +310,7 @@ var App = {
     });
     document.getElementById('btnSet').classList.toggle('on', cur.id === 'settings');
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { }
-    window.scrollTo(0, 0);
+    window.scrollTo(0, same ? y : 0);
   },
   buildTabs: function () {
     var nav = document.getElementById('tabbar');
