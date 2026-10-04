@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 20;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 21;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -348,7 +348,21 @@ function header(w, title, right, ctx) {
   return top;
 }
 function image(st, img, W, H) { const i = st.addImage(img); i.imageSize = new Size(W, H); i.centerAlignImage(); return i; }
-const chartW = (fam) => (fam === 'small' ? 130 : 300);
+/* 실제 위젯 크기(pt): 기기 화면 폭에 따라 다름 → 그래프·선이 위젯 폭을 정확히 채우도록 */
+const WSIZE = [
+  [320, 141, 292, 311], [360, 155, 329, 345], [375, 155, 329, 345], [390, 158, 338, 354], [393, 158, 338, 354],
+  [402, 162, 344, 366], [414, 169, 360, 379], [428, 170, 364, 382], [430, 170, 364, 382], [440, 170, 364, 382]
+];
+function widgetBox(fam) {
+  let sw = 390;
+  try { sw = Device.screenSize().width; } catch (e) { }
+  if (Device.isPad && Device.isPad()) sw = 390;   // 아이패드는 아이폰 기준 크기로
+  let best = WSIZE[3];
+  WSIZE.forEach((r) => { if (Math.abs(r[0] - sw) < Math.abs(best[0] - sw)) best = r; });
+  return fam === 'small' ? [best[1], best[1]] : fam === 'large' ? [best[2], best[3]] : [best[2], best[1]];
+}
+let CW = 300;   // 위젯 안쪽 폭 (build에서 계산)
+const chartW = () => CW;
 const lastName = (e) => (e && (e.name || e.org)) || '';
 
 // ---------- 종류별 ----------
@@ -426,9 +440,9 @@ function number(w, ctx) {
   if (fam !== 'small' && S.rows.length > 1) {
     const H = fam === 'large' ? 120 : 34;
     image(w, chartImg(S.vals.slice(-12), S.labels.slice(-12), {
-      W: 300, H, P, F, target: cfg.show.target ? tg : null, invert: S.M.invert, shape: cfg.shape,
+      W: CW, H, P, F, target: cfg.show.target ? tg : null, invert: S.M.invert, shape: cfg.shape,
       values: fam === 'large' && cfg.show.labels, dates: fam === 'large' && cfg.show.dates, base: fam === 'large', pad: 6
-    }), 300, H);
+    }), CW, H);
   }
 }
 
@@ -456,7 +470,7 @@ function summary(w, ctx) {
   if (S.rows.length) {
     if (fam === 'large' && cfg.show.title) text(w, S.M.title, F.txt(8.5), P.faint);
     const H = fam === 'large' ? 100 : 46;
-    image(w, chartImg(S.vals, S.labels, { W: 300, H, P, F, target: cfg.show.target ? S.M.target(s) : null, invert: S.M.invert, shape: cfg.shape, dates: fam === 'large' && cfg.show.dates, values: fam === 'large' && cfg.show.labels }), 300, H);
+    image(w, chartImg(S.vals, S.labels, { W: CW, H, P, F, target: cfg.show.target ? S.M.target(s) : null, invert: S.M.invert, shape: cfg.shape, dates: fam === 'large' && cfg.show.dates, values: fam === 'large' && cfg.show.labels }), CW, H);
   }
   if (fam === 'large') {
     const other = cfg.metric === 'grade' ? 'pct' : 'grade';
@@ -464,7 +478,7 @@ function summary(w, ctx) {
     if (G.rows.length) {
       w.addSpacer(8);
       if (cfg.show.title) text(w, G.M.title, F.txt(8.5), P.faint);
-      image(w, chartImg(G.vals, G.labels, { W: 300, H: 74, P, F, target: cfg.show.target ? G.M.target(s) : null, invert: G.M.invert, shape: cfg.shape, dates: cfg.show.dates, values: cfg.show.labels }), 300, 74);
+      image(w, chartImg(G.vals, G.labels, { W: CW, H: 74, P, F, target: cfg.show.target ? G.M.target(s) : null, invert: G.M.invert, shape: cfg.shape, dates: cfg.show.dates, values: cfg.show.labels }), CW, 74);
     }
   }
 }
@@ -499,7 +513,7 @@ function goal(w, ctx) {
   w.addSpacer();
   if (fam === 'large' && S.rows.length) {
     const L = series(ctx, key, cfg.count || 0);
-    image(w, chartImg(L.vals, L.labels, { W: 300, H: 110, P, F, target: tg, invert: L.M.invert, shape: cfg.shape, dates: cfg.show.dates, values: cfg.show.labels }), 300, 110);
+    image(w, chartImg(L.vals, L.labels, { W: CW, H: 110, P, F, target: tg, invert: L.M.invert, shape: cfg.shape, dates: cfg.show.dates, values: cfg.show.labels }), CW, 110);
   }
 }
 
@@ -580,7 +594,7 @@ function weak(w, ctx) {
   header(w, '오답률 높은 제재', '', ctx);
   w.addSpacer(6);
   if (!list.length) { text(w, '지문 기록이 쌓이면 표시됩니다', F.txt(10), P.sub); return; }
-  const BW = fam === 'small' ? 46 : 190;
+  const BW = Math.max(40, CW - (fam === 'small' ? 84 : 110));
   list.forEach((x, i) => {
     if (i) w.addSpacer(fam === 'large' ? 9 : 5);
     const r = w.addStack(); hz(r); r.centerAlignContent();
@@ -720,7 +734,7 @@ const BLOCKS = {
     const by = {};
     (data.passages || []).forEach((p) => { if (!p.genre) return; const o = by[p.genre] || (by[p.genre] = { q: 0, w: 0 }); o.q += +p.qn || 0; o.w += +p.wrong || 0; });
     const list = Object.keys(by).filter((g) => by[g].q >= 4).map((g) => ({ g, r: by[g].w / by[g].q })).sort((a, c) => c.r - a.r).slice(0, b.n || 3);
-    const BW = fam === 'small' ? 46 : 190;
+    const BW = Math.max(40, CW - (fam === 'small' ? 84 : 110));
     list.forEach((x, i) => {
       if (i) w.addSpacer(4);
       const r = w.addStack(); hz(r); r.centerAlignContent();
@@ -745,7 +759,7 @@ const BLOCKS = {
     if (b.align === 'center') t.centerAlignText();
   },
   line(w, ctx) {
-    const lr = hz(w.addStack()); const l = lr.addStack(); l.size = new Size(ctx.fam === 'small' ? 130 : 300, 1); l.backgroundColor = C(ctx.P.line); lr.addSpacer();
+    const lr = hz(w.addStack()); const l = lr.addStack(); l.size = new Size(CW, 1); l.backgroundColor = C(ctx.P.line); lr.addSpacer();
   },
   gap(w, ctx, b) { if (b.flex) w.addSpacer(); else w.addSpacer(pick3(b.size, [4, 10, 20])); }
 };
@@ -823,6 +837,7 @@ async function build(param) {
   }
   const pd = { tight: [9, 11], normal: [13, 15], wide: [18, 20] }[cfg.pad] || [13, 15];
   w.setPadding(pd[0], pd[1], pd[0] - 2, pd[1]);
+  CW = Math.floor(widgetBox(fam)[0] - pd[1] * 2);
   (KINDS[cfg.kind] || trend)(w, ctx);
   /* 안내: 스크립트가 예전 판이거나, Parameter 이름의 위젯을 못 찾았을 때 */
   const note = (s.widgetScriptVer || 0) > SCRIPT_VER ? '앱에서 스크립트를 다시 복사해 주세요'
