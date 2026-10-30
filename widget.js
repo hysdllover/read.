@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 26;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 27;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -809,7 +809,8 @@ const BLOCKS = {
     if (b.align === 'center') t.centerAlignText();
   },
   line(w, ctx) {
-    const lr = hz(w.addStack()); const l = lr.addStack(); l.size = new Size(CW, 1); l.backgroundColor = C(ctx.P.line); lr.addSpacer();
+    /* 폭을 계산하지 않고 위젯 안쪽 폭을 그대로 채움 (기기마다 위젯 크기가 달라도 끝까지) */
+    const l = hz(w.addStack()); l.addSpacer(); l.size = new Size(0, 1); l.backgroundColor = C(ctx.P.line);
   },
   gap(w, ctx, b) { if (b.flex) w.addSpacer(); else w.addSpacer(pick3(b.size, [4, 10, 20])); }
 };
