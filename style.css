@@ -524,7 +524,7 @@ a.btn{text-decoration:none;}
 body{background-image:var(--paper,none);}
 html.paper .card,html.paper .stat,html.paper .list,html.paper .sheet,html.paper .rule-card,html.paper .wb-sub{background-image:var(--paper-card,none);}
 html.paper #topbar,html.paper #tabbar{background-image:var(--paper-card,none);}
-html.paper .card,html.paper .stat,html.paper .list{box-shadow:0 0 0 1px var(--line-2),0 1px 3px rgba(60,50,35,.06);}
+html.paper .card,html.paper .stat,html.paper .list{box-shadow:0 0 0 1px var(--line-2),0 1px 3px rgba(35,45,60,.06);}
 @media print{body,html.paper .card,html.paper .stat,html.paper .list{background-image:none !important;}}
 
 /* 노트 무늬 (설정 → 테마 색상) — 글 쓰는 곳에 줄/모눈/점, 왼쪽 여백선
