@@ -9,7 +9,7 @@ var GenreView = (function () {
     pre = pre || {};
     var it = item || {
       date: pre.date || today(),
-      area: pre.area || area,
+      area: pre.area || (area === '전체' ? '독서' : area),
       genre: pre.genre || '',
       title: '', source: pre.source || '', examId: pre.examId || '',
       qn: '', wrong: '', diff: null, types: [], method: '', note: ''
@@ -57,9 +57,9 @@ var GenreView = (function () {
   /* 시험(또는 날짜)마다 제재별 오답 개수를 쌓은 막대 */
   function trend(a, opt) {
     opt = opt || {};
-    var G = GENRES[a], by = {}, keys = [];
+    var G = a === '전체' ? ALL_GENRES : GENRES[a], by = {}, keys = [];
     Store.data.passages.forEach(function (p) {
-      if (p.area !== a || p.wrong == null || G.indexOf(p.genre) < 0) return;
+      if ((a !== '전체' && p.area !== a) || p.wrong == null || G.indexOf(p.genre) < 0) return;
       var k = p.examId || ('d' + p.date);
       if (!by[k]) { by[k] = { date: p.date || '', w: {} }; keys.push(k); }
       by[k].w[p.genre] = (by[k].w[p.genre] || 0) + num(p.wrong, 0);
@@ -71,16 +71,17 @@ var GenreView = (function () {
     return stackChart(rows.map(function (r) { return G.map(function (g) { return r.w[g] || 0; }); }),
       rows.map(function (r) { return (r.date || '').slice(5).replace('.', '/'); }),
       G.map(function (g) { return Store.color(g); }), { size: opt.size || '' }) +
-      (rows.length ? '<div class="avg-row">' + G.map(function (g, i) { return '<span>' + esc(g) + ' <b>' + tot[i] + '</b></span>'; }).join('') + '</div>' : '');
+      (rows.length ? '<div class="avg-row g-tot">' + G.map(function (g, i) { return '<span class="lgd"><i style="background:' + Store.color(g) + '"></i>' + esc(g) + ' <b>' + tot[i] + '</b></span>'; }).join('') + '</div>' : '');
   }
 
   function render(root) {
     var all = Store.data.passages.slice().sort(byDateDesc);
-    var inArea = all.filter(function (p) { return p.area === area; });
+    var inArea = area === '전체' ? all : all.filter(function (p) { return p.area === area; });
+    var GS = area === '전체' ? ALL_GENRES : GENRES[area], gw = area === '문학' ? '갈래별' : '제재별';
 
     /* 영역 전환 */
     var seg = h('<div class="chips" style="margin-bottom:4px"></div>');
-    AREAS.forEach(function (a) {
+    AREAS.concat('전체').forEach(function (a) {
       var b = h('<button type="button" class="pill' + (a === area ? ' on' : '') + '">' + esc(a) + '</button>');
       b.onclick = function () { area = a; pick = null; App.refresh(); };
       seg.appendChild(b);
@@ -89,10 +90,10 @@ var GenreView = (function () {
     var cc = cols(root), A = cc[0], B = cc[1];
 
     /* 제재별 요약 */
-    var sec = h('<section><div class="sec-h"><h2>' + (area === '독서' ? '제재별 현황' : '갈래별 현황') +
+    var sec = h('<section><div class="sec-h"><h2>' + gw + ' 현황' +
       '</h2><span class="more">기록 ' + inArea.length + '</span></div></section>');
     var grid = h('<div class="grid3"></div>');
-    GENRES[area].forEach(function (g) {
+    GS.forEach(function (g) {
       var rows = inArea.filter(function (p) { return p.genre === g; });
       var wsum = rows.reduce(function (s, p) { return s + num(p.wrong, 0); }, 0);
       var d = avg(rows.filter(function (p) { return p.diff; }).map(function (p) { return p.diff; }));
@@ -108,8 +109,7 @@ var GenreView = (function () {
     A.appendChild(sec);
 
     /* 제재별 오답 추이 */
-    var s2 = h('<section><div class="sec-h"><h2>' + (area === '독서' ? '제재별' : '갈래별') + ' 오답 추이</h2><span class="more">' +
-      legend(GENRES[area], GENRES[area].map(function (g) { return Store.color(g); })) + '</span></div></section>');
+    var s2 = h('<section><div class="sec-h"><h2>' + gw + ' 오답 추이</h2><span class="more">시험별 누적</span></div></section>');
     var b2 = h('<div class="card"></div>');
     b2.innerHTML = trend(area, { last: 12 });
     s2.appendChild(b2);
