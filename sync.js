@@ -54,11 +54,11 @@ var Sync = {
     return fetch('https://api.github.com' + path, {
       method: opt.method || 'GET',
       cache: 'no-store',
-      headers: {
+      headers: Object.assign({
         'Authorization': 'Bearer ' + c.token,
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json'
-      },
+      }, opt.headers || {}),
       body: opt.body ? JSON.stringify(opt.body) : undefined
     }).then(function (r) {
       var hd = function (k) { return r.headers.get(k); }, info = {};
@@ -66,7 +66,8 @@ var Sync = {
       if (hd('x-oauth-scopes') != null) info.scopes = hd('x-oauth-scopes') || '(없음 · 세분화 토큰)';
       if (hd('github-authentication-token-expiration')) info.exp = hd('github-authentication-token-expiration');
       self.setDiag(info);
-      if (r.ok) return r.json();
+      if (r.status === 304) return { notModified: true };   // 바뀐 것 없음 (깃허브 한도에서 차감 안 됨)
+      if (r.ok) return r.json().then(function (b) { if (opt.etag) opt.etag(hd('etag')); return b; });
       return r.json().catch(function () { return {}; }).then(function (b) {
         var e = new Error(r.status === 401 ? '토큰이 올바르지 않습니다' : '연결 실패 (' + r.status + ')');
         e.status = r.status; e.gh = b && b.message || ''; e.step = step;
@@ -130,7 +131,11 @@ var Sync = {
 
   pull: function (gid) {
     var self = this;
-    return this.api('/gists/' + gid, { step: '받기' }).then(function (g) {
+    var c = this.cfg(), etag = null;
+    var h = c.etag && c.etagGist === gid ? { 'If-None-Match': c.etag } : null;
+    return this.api('/gists/' + gid, { step: '받기', headers: h, etag: function (e) { etag = e; } }).then(function (g) {
+      if (g.notModified) return { same: true };
+      if (etag) { var cc = self.cfg(); cc.etag = etag; cc.etagGist = gid; self.setCfg(cc); }
       var files = g.files || {};
       var f = files[self.file()];
       /* 이 칸의 파일이 없으면 Gist에 있는 다른 칸 기록으로 맞춤 (코드 기능을 없앤 뒤 기기 간 칸 번호 차이 보정) */
@@ -173,14 +178,19 @@ var Sync = {
     this.paint();
     return this.ensureGist().then(function (gid) {
       return self.pull(gid).then(function (remote) {
+        /* 깃허브 쪽이 지난번 그대로: 이 기기에서 바뀐 게 없으면 요청 없이 끝, 있으면 올리기만 */
+        if (remote && remote.same) {
+          if (hashStr(JSON.stringify(Store.data)) === self.cfg().lastHash) return null;
+          return self.push(gid, Store.data).then(function () { self.mark(Store.data, true); });
+        }
         var before = JSON.stringify(Store.data);
         var merged = remote ? mergeData(Store.data, remote) : Store.data;
         self.pulledNew = before !== JSON.stringify(merged);
         var changed = !remote || JSON.stringify(remote) !== JSON.stringify(merged);
         Store.data = merged;
         Store.save(true);
-        if (!changed) return null;
-        return self.push(gid, merged);
+        if (!changed) { self.mark(merged); return null; }
+        return self.push(gid, merged).then(function () { self.mark(merged, true); });
       });
     }).then(function () {
       var c = self.cfg(); c.last = Date.now(); self.setCfg(c);
@@ -198,12 +208,28 @@ var Sync = {
     });
   },
 
-  /* 저장 후 자동 올리기 (묶어서 4초 뒤 1회) */
+  /* 마지막으로 맞춘 기록의 지문 (같으면 다시 올리지 않음). 올린 뒤엔 etag가 바뀌므로 지움 */
+  mark: function (data, pushed) {
+    var c = this.cfg(); c.lastHash = hashStr(JSON.stringify(data));
+    if (pushed) { delete c.etag; }
+    this.setCfg(c);
+  },
+
+  /* 저장 후 자동 올리기: 편집이 끝나고 30초 조용할 때 1회. 입력 창·편집 시트가 열려 있으면 미룸 */
   queue: function () {
     var self = this;
     if (!this.on()) return;
     clearTimeout(this.timer);
-    this.timer = setTimeout(function () { self.lastRun = 0; self.run(false); }, 4000);
+    this.pending = true;
+    this.timer = setTimeout(function fire() {
+      var a = document.activeElement;
+      if (document.querySelector('.sheet-wrap') || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) { self.timer = setTimeout(fire, 15000); return; }
+      self.flush();
+    }, 30000);
+  },
+  flush: function () {
+    if (!this.pending) return;
+    clearTimeout(this.timer); this.pending = false; this.lastRun = 0; this.run(false);
   },
 
   paint: function () {
