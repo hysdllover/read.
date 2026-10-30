@@ -47,6 +47,39 @@ var SettingsView = (function () {
     Store.data.settings.theme = t; Store.touchSettings(); applyTheme(t);
   }
 
+  /* 제재 이름 바꾸기 · 추가 · 삭제 (기록의 제재 이름도 함께 변경) */
+  function genreSheet(a, g) {
+    var f = form(fText('이름', 'name', g || '', a === '독서' ? '예: 예술' : '예: 고전수필'));
+    var used = g ? Store.data.passages.filter(function (p) { return p.genre === g; }).length : 0;
+    function save(lists) { Store.data.settings.genres = lists; applyGenres(lists); Store.touchSettings(); var y = window.scrollY; App.refresh(); window.scrollTo(0, y); }
+    function lists() { return { '독서': GENRES['독서'].slice(), '문학': GENRES['문학'].slice() }; }
+    openSheet({
+      title: g ? (a === '독서' ? '제재' : '갈래') + ' 수정' : (a === '독서' ? '제재' : '갈래') + ' 추가',
+      body: f,
+      onOk: function () {
+        var n = readForm(f).name.replace(/\s+/g, ' ');
+        if (!n) { toast('이름을 입력해 주세요'); return false; }
+        if (n === g) return;
+        if (GENRE_AREA[n]) { toast('이미 있는 이름입니다'); return false; }
+        var L = lists(), cs = Store.data.settings.colors;
+        if (g) {
+          L[a][L[a].indexOf(g)] = n;
+          cs[n] = Store.color(g); delete cs[g];
+          Store.data.passages.forEach(function (p) { if (p.genre === g) { p.genre = n; p.u = Date.now(); } });
+        } else {
+          L[a].push(n);
+          cs[n] = SWATCHES[(ALL_GENRES.length + 3) % SWATCHES.length];
+        }
+        save(L); toast(g ? '이름을 바꿨습니다' : '추가했습니다');
+      },
+      onDelete: g ? function () {
+        if (used) { toast('기록 ' + used + '개가 있어 삭제할 수 없어요. 이름을 바꿔 주세요'); return; }
+        if (GENRES[a].length < 2) { toast('하나 이상 있어야 합니다'); return; }
+        var L = lists(); L[a].splice(L[a].indexOf(g), 1); save(L); toast('삭제했습니다');
+      } : null
+    });
+  }
+
   function colorSheet(g, title) {
     var cur = Store.color(g);
     var body = h('<div></div>');
@@ -204,6 +237,25 @@ var SettingsView = (function () {
     });
     g2.appendChild(grid);
     root.appendChild(g2);
+
+    /* 제재 · 갈래 편집 */
+    var g7 = h('<section><div class="sec-h"><h2>제재 · 갈래 편집</h2><span class="more">탭하여 이름 변경 · 삭제</span></div></section>');
+    var c7 = h('<div class="card"></div>');
+    AREAS.forEach(function (a) {
+      var row = h('<div class="f"><label>' + (a === '독서' ? '독서 제재' : '문학 갈래') + '</label><div class="chips" style="flex-wrap:wrap;overflow:visible"></div></div>');
+      var ch = row.querySelector('.chips');
+      GENRES[a].forEach(function (g) {
+        var b = h('<button type="button" class="pill"><span class="dot" style="width:7px;height:7px;margin-right:5px;background:' + Store.color(g) + '"></span>' + esc(g) + '</button>');
+        b.onclick = function () { genreSheet(a, g); };
+        ch.appendChild(b);
+      });
+      var add = h('<button type="button" class="pill">+ 추가</button>');
+      add.onclick = function () { genreSheet(a, null); };
+      ch.appendChild(add);
+      c7.appendChild(row);
+    });
+    g7.appendChild(c7);
+    root.appendChild(g7);
 
     var g8 = h('<section><div class="sec-h"><h2>영역별 오답 색상</h2><span class="more">그래프 · 탭하여 변경</span></div></section>');
     var grid8 = h('<div class="grid3"></div>');

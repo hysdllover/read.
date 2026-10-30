@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v26';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v27';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -36,9 +36,19 @@ var GENRES = {
 };
 /* 이전 이름 → 현재 이름 (기존 기록 자동 변환) */
 var GENRE_ALIAS = { '철학': '인문', '고전산문': '고전소설', '현대산문': '현대소설' };
-var ALL_GENRES = GENRES['독서'].concat(GENRES['문학']);
-var GENRE_AREA = {};
-AREAS.forEach(function (a) { GENRES[a].forEach(function (g) { GENRE_AREA[g] = a; }); });
+var GENRES_DEF = { '독서': GENRES['독서'].slice(), '문학': GENRES['문학'].slice() };
+var ALL_GENRES = [], GENRE_AREA = {};
+/* 제재 목록: settings.genres가 있으면 그것으로 (설정에서 이름 바꾸기·추가·삭제) */
+function applyGenres(custom) {
+  AREAS.forEach(function (a) {
+    var l = custom && Array.isArray(custom[a]) && custom[a].length ? custom[a] : GENRES_DEF[a];
+    GENRES[a].length = 0; l.forEach(function (g) { GENRES[a].push(g); });
+  });
+  ALL_GENRES = GENRES['독서'].concat(GENRES['문학']);
+  GENRE_AREA = {};
+  AREAS.forEach(function (a) { GENRES[a].forEach(function (g) { GENRE_AREA[g] = a; }); });
+}
+applyGenres();
 
 var DEFAULT_COLORS = {
   '인문': '#6E7C99', '사회': '#7A8465', '경제': '#8C8768',
@@ -80,13 +90,14 @@ function migrate(d) {
   ['reading', 'exams', 'passages', 'tomb'].forEach(function (k) {
     if (!Array.isArray(out[k])) out[k] = [];
   });
+  applyGenres(out.settings.genres);
   /* 제재 이름 변경 반영 */
   out.passages.forEach(function (p) {
-    if (GENRE_ALIAS[p.genre]) p.genre = GENRE_ALIAS[p.genre];
+    if (GENRE_ALIAS[p.genre] && !GENRE_AREA[p.genre]) p.genre = GENRE_ALIAS[p.genre];
     if (p.genre && GENRE_AREA[p.genre]) p.area = GENRE_AREA[p.genre];
   });
   Object.keys(GENRE_ALIAS).forEach(function (old) {
-    if (out.settings.colors[old]) {
+    if (out.settings.colors[old] && !GENRE_AREA[old]) {
       if (!out.settings.colors[GENRE_ALIAS[old]]) out.settings.colors[GENRE_ALIAS[old]] = out.settings.colors[old];
       delete out.settings.colors[old];
     }
@@ -319,6 +330,7 @@ var App = {
   /* 렌더마다 컨테이너를 새로 만들어 이벤트 리스너 누적을 차단 */
   refresh: function () {
     if (CODE === null) return;
+    if (Store.data) applyGenres(Store.data.settings.genres);
     var cur = this.view();
     /* 같은 화면을 다시 그릴 때는 보던 위치 유지 (탭을 옮길 때만 맨 위로) */
     var same = this._shown === cur.id, y = window.scrollY;
