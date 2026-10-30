@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 24;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 25;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -89,13 +89,15 @@ function rgb(h) { h = String(h || '#000').replace('#', ''); if (h.length === 3) 
 function mix(a, b, t) { const x = rgb(a), y = rgb(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
 function palette(theme, style, design) {
   const t = Object.assign({}, DEF, theme || {});
+  const old = { '#efede6': ['#e8ecf1', '#f7f9fb', '#262c36'], '#efe9dc': ['#e3e8ee', '#f2f5f8', '#252b34'] }[String(t.bg).toLowerCase()];   // 예전 누런 배경 → 블루그레이
+  if (old) { t.bg = old[0]; t.card = old[1]; t.text = old[2]; }
   let p;
   if (style === 'custom') {
     const d = Object.assign({ bg: t.card, text: t.text, accent: t.accent, good: t.good, bad: t.bad, hl: t.hl }, design || {});
     p = { bg: d.bg, text: d.text, accent: d.accent, good: d.good, bad: d.bad, hl: d.hl };
   } else if (style === 'dark') p = { bg: '#1c2029', text: '#e6e7ec', accent: mix(t.accent, '#ffffff', 0.35), good: mix(t.good, '#ffffff', 0.3), bad: mix(t.bad, '#ffffff', 0.25), hl: mix(t.hl, '#ffffff', 0.3) };
   else if (style === 'color') p = { bg: t.accent, text: '#ffffff', accent: '#ffffff', good: mix(t.good, '#ffffff', 0.65), bad: mix(t.bad, '#ffffff', 0.6), hl: '#ffffff' };
-  else if (style === 'paper') p = { bg: '#f6f2e9', text: '#2c2a25', accent: mix(t.accent, '#2c2a25', 0.15), good: t.good, bad: t.bad, hl: t.hl };
+  else if (style === 'paper') p = { bg: '#eef1f5', text: '#252b34', accent: mix(t.accent, '#252b34', 0.15), good: t.good, bad: t.bad, hl: t.hl };
   else if (style === 'pastel') p = { bg: mix(t.accent, '#ffffff', 0.86), text: mix(t.accent, '#15171c', 0.75), accent: t.accent, good: t.good, bad: t.bad, hl: t.hl };
   else p = { bg: style === 'bg' ? t.bg : t.card, text: t.text, accent: t.accent, good: t.good, bad: t.bad, hl: t.hl };
   p.sub = mix(p.text, p.bg, 0.3);
@@ -322,7 +324,7 @@ function paperImg(W, H, bg, bg2, lv, note, margin, P) {
   } else { dc.setFillColor(C(bg)); dc.fillRect(new Rect(0, 0, W, H)); }
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  const dark = rgb(bg).reduce((a, v) => a + v, 0) < 384, ink = dark ? '#ffffff' : '#5a4f3c';
+  const dark = rgb(bg).reduce((a, v) => a + v, 0) < 384, ink = dark ? '#ffffff' : '#3d4a5c';
   const k = [0, 0.6, 1, 1.5][lv] || 0;
   for (let i = 0; k && i < W * H / 9; i++) {   // 잔 알갱이
     dc.setFillColor(C(rnd() < 0.5 ? ink : (dark ? '#000000' : '#ffffff'), (0.025 + rnd() * 0.05) * k));

@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v24';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v25';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -235,8 +235,8 @@ var THEME_PRESETS = {
   '세이지': { accent: '#6e8c8a', good: '#7a8465', bad: '#99857a', hl: '#8085a0', bg: '#f3f5f3', card: '#ffffff', text: '#202422' },
   '로즈': { accent: '#8f7782', good: '#7f8a6a', bad: '#a07070', hl: '#8f8aae', bg: '#f8f5f5', card: '#ffffff', text: '#2a2325' },
   '샌드': { accent: '#857d66', good: '#7a8465', bad: '#a08a8a', hl: '#8085a0', bg: '#f6f5f1', card: '#fffefb', text: '#26251f' },
-  '노트': { accent: '#4f6788', good: '#7a8465', bad: '#b07a80', hl: '#8f8aae', bg: '#efede6', card: '#fbfaf5', text: '#2c2f36', paper: 1, note: 'lined', margin: true },
-  '종이': { accent: '#5f6676', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#efe9dc', card: '#f8f4ea', text: '#2f2b25', paper: 2 },
+  '노트': { accent: '#4f6788', good: '#7a8465', bad: '#b07a80', hl: '#8f8aae', bg: '#e8ecf1', card: '#f7f9fb', text: '#262c36', paper: 1, note: 'lined', margin: true },
+  '종이': { accent: '#56657c', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#e3e8ee', card: '#f2f5f8', text: '#252b34', paper: 2 },
   '나이트': { accent: '#8fa0bd', good: '#9aa883', bad: '#c39ca0', hl: '#aaa5c8', bg: '#1b1f27', card: '#242933', text: '#e4e6ec' }
 };
 function hexRgb(h) { h = String(h || '').replace('#', ''); if (h.length === 3) h = h.replace(/./g, '$&$&'); var n = parseInt(h, 16) || 0; return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
@@ -260,7 +260,13 @@ function themeFromGenres() {
   return { accent: accent, good: near(85), bad: near(355), hl: near(265),
     bg: mixHex(accent, '#ffffff', 0.94), card: '#ffffff', text: mixHex(accent, '#121317', 0.82) };
 }
-function currentTheme() { return Object.assign({}, THEME_DEFAULT, (Store.data && Store.data.settings.theme) || {}); }
+/* 예전 누런 노트·종이 배경 → 블루그레이 */
+var OLD_PAPER = { '#efede6': '노트', '#efe9dc': '종이' };
+function currentTheme() {
+  var t = Object.assign({}, THEME_DEFAULT, (Store.data && Store.data.settings.theme) || {}), p = THEME_PRESETS[OLD_PAPER[String(t.bg).toLowerCase()]];
+  if (p) { t.bg = p.bg; t.card = p.card; t.text = p.text; }
+  return t;
+}
 function applyTheme(t) {
   t = t || currentTheme();
   var r = document.documentElement.style, dark = hexRgb(t.bg).reduce(function (a, v) { return a + v; }, 0) < 384;
@@ -290,7 +296,7 @@ function applyTheme(t) {
 }
 function paperTex(lv, dark, k) {
   var a = [0, 0.05, 0.09, 0.14][lv] * k, b = [0, 0.035, 0.06, 0.09][lv] * k;
-  var c = dark ? '1 1 1' : '0.36 0.31 0.24';
+  var c = dark ? '1 1 1' : '0.24 0.29 0.36';   /* 블루그레이 결 */
   var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'>" +
     "<filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/>" +
     "<feColorMatrix values='0 0 0 0 " + c.split(' ')[0] + " 0 0 0 0 " + c.split(' ')[1] + " 0 0 0 0 " + c.split(' ')[2] + " 0 0 0 " + a.toFixed(3) + " 0'/></filter>" +
