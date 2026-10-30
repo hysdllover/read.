@@ -128,14 +128,11 @@ var Report = (function () {
       });
       out += sec('제재별 기록', table(['영역', '제재', '지문', '문항', '오답', '오답률', '난도'], rows));
 
-      var cnt = {};
-      d.passages.forEach(function (p) { (p.types || []).forEach(function (t) { cnt[t] = (cnt[t] || 0) + 1; }); });
-      var keys = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; }).slice(0, 5);
-      if (keys.length) {
-        out += sec('오답 원인 상위 5', '<div class="card">' + keys.map(function (k) {
-          return barRow(k, cnt[k], cnt[keys[0]], 'var(--accent)', '회');
-        }).join('') + '</div>');
-      }
+      AREAS.forEach(function (a) {
+        if (!d.passages.some(function (p) { return p.area === a && p.wrong != null; })) return;
+        out += sec((a === '독서' ? '제재별' : '갈래별') + ' 오답 추이', '<div class="card rp-c">' + GenreView.trend(a, { size: 'lg' }) + '</div>',
+          legend(GENRES[a], GENRES[a].map(function (g) { return Store.color(g); })));
+      });
     }
 
     if (!exams.length && !d.passages.length) out += emptyBox('아직 기록이 없습니다', '모의고사나 지문을 기록하면 리포트가 채워집니다');
