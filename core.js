@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v23';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v24';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -270,8 +270,8 @@ function applyTheme(t) {
   set('--bad', t.bad); set('--rose', t.bad); set('--danger', t.bad);
   set('--violet', t.hl);
   set('--bg', t.bg); set('--surface', t.card); set('--surface-2', mixHex(t.card, t.bg, 0.5));
-  set('--t1', t.text); set('--t2', mixHex(t.text, t.card, 0.45)); set('--t3', mixHex(t.text, t.card, 0.62));
-  set('--line', mixHex(t.card, t.text, dark ? 0.16 : 0.1)); set('--line-2', mixHex(t.card, t.text, dark ? 0.09 : 0.055));
+  set('--t1', t.text); set('--t2', mixHex(t.text, t.card, 0.28)); set('--t3', mixHex(t.text, t.card, 0.45));   /* 보조 글씨: 흐리지 않게 */
+  set('--line', mixHex(t.card, t.text, dark ? 0.22 : 0.16)); set('--line-2', mixHex(t.card, t.text, dark ? 0.13 : 0.09));
   var bc = hexRgb(t.bg), cc = hexRgb(t.card);
   set('--bar', 'rgba(' + bc.join(',') + ',.92)'); set('--tab', 'rgba(' + cc.join(',') + ',.94)');
   set('--on-t1', t.card);
@@ -282,8 +282,8 @@ function applyTheme(t) {
   set('--paper-card', lv ? paperTex(lv, dark, 0.6) : 'none');
   document.documentElement.classList.toggle('paper', !!lv);
   /* 노트 무늬: 줄 · 모눈 · 점, 왼쪽 여백선 */
-  set('--rule', mixHex(t.card, mixHex(t.accent, t.text, 0.3), dark ? 0.2 : 0.13));
-  set('--margin-line', mixHex(t.card, t.bad, 0.55));
+  set('--rule', mixHex(t.card, mixHex(t.accent, t.text, 0.3), dark ? 0.26 : 0.19));
+  set('--margin-line', mixHex(t.card, t.bad, 0.75));
   var root = document.documentElement;
   ['lined', 'grid', 'dot'].forEach(function (k) { root.classList.toggle('note-' + k, t.note === k); });
   root.classList.toggle('note-margin', !!t.margin && !!t.note);

@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 23;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 24;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -98,10 +98,10 @@ function palette(theme, style, design) {
   else if (style === 'paper') p = { bg: '#f6f2e9', text: '#2c2a25', accent: mix(t.accent, '#2c2a25', 0.15), good: t.good, bad: t.bad, hl: t.hl };
   else if (style === 'pastel') p = { bg: mix(t.accent, '#ffffff', 0.86), text: mix(t.accent, '#15171c', 0.75), accent: t.accent, good: t.good, bad: t.bad, hl: t.hl };
   else p = { bg: style === 'bg' ? t.bg : t.card, text: t.text, accent: t.accent, good: t.good, bad: t.bad, hl: t.hl };
-  p.sub = mix(p.text, p.bg, 0.45);
-  p.faint = mix(p.text, p.bg, 0.62);
-  p.line = mix(p.bg, p.text, 0.12);
-  p.track = mix(p.bg, p.text, 0.08);
+  p.sub = mix(p.text, p.bg, 0.3);
+  p.faint = mix(p.text, p.bg, 0.46);
+  p.line = mix(p.bg, p.text, 0.18);
+  p.track = mix(p.bg, p.text, 0.12);
   p.dot = p.bg;
   return p;
 }
