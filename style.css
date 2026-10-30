@@ -551,3 +551,16 @@ html.note-lined .f textarea{--lh:1.7em;line-height:1.7;background-image:var(--no
 html.note-margin .notes .card,html.note-margin .rule-card,html.note-margin .f textarea{padding-left:42px;}
 html.note-margin .rule-card{border-left:0 !important;}
 @media print{html[class*=note-] .card,html[class*=note-] .list,html[class*=note-] .item-body,html[class*=note-] .rule-body{background-image:none !important;}}
+
+/* 기기 연동 상태 */
+.sync-diag{margin-bottom:10px;font-size:.75rem;}
+.sync-diag .kv{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--line-2);}
+.sync-diag .kv:last-child{border-bottom:0;}
+.sync-diag .kv>span{color:var(--t3);flex:0 0 auto;}
+.sync-diag .kv>b{font-weight:var(--wb,400);text-align:right;overflow-wrap:anywhere;color:var(--t1);}
+.sync-diag small{color:var(--t3);font-size:.9em;}
+.sync-diag .good,.sync-diag .kv>b.good{color:var(--good);} .sync-diag .bad,.sync-diag .kv>b.bad{color:var(--bad);}
+.sync-diag a{color:var(--accent);}
+.sync-help{background:var(--surface-2);border-radius:10px;padding:10px 12px;margin-bottom:8px;line-height:1.6;}
+.sync-help b{color:var(--bad);font-weight:var(--wb,500);}
+.sync-help div{color:var(--t2);}
