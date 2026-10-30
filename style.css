@@ -167,6 +167,11 @@ section{margin-bottom:18px;}
 .f input:focus,.f textarea:focus,.f select:focus{outline:none;border-color:var(--t3);background:var(--surface);}
 .f-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .f-row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.f-row5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
+.f-row5 .f label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.f-row5 .f input{text-align:center;padding-left:4px;padding-right:4px;}
+.f-cap{font-size:.8em;color:var(--t2);margin:4px 0 6px;}
+.f-cap span{color:var(--t3);font-size:.92em;}
 .seg{display:flex;gap:6px;flex-wrap:wrap;}
 .seg button{
   border:1px solid var(--line);background:var(--surface-2);
