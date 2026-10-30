@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v31';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v32';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -207,6 +207,8 @@ function dLeft(s) {
 function byDateDesc(a, b) { return (b.date || '').localeCompare(a.date || '') || (b.u || 0) - (a.u || 0); }
 function avg(arr) { return arr.length ? arr.reduce(function (s, v) { return s + v; }, 0) / arr.length : null; }
 function r1(n) { return n == null ? '–' : (Math.round(n * 10) / 10); }
+/* 짧은 문자열 해시 (동기화 변경 확인용) */
+function hashStr(t) { var h = 5381, i = t.length; while (i) h = (h * 33) ^ t.charCodeAt(--i); return (h >>> 0).toString(36) + t.length; }
 /* 날짜·시각 (같은 날이면 시각만) */
 function fmtTime(ts) {
   if (!ts) return '–';
@@ -484,7 +486,9 @@ var App = {
     document.getElementById('btnSet').onclick = function () { self.go(self.route === 'settings' ? self.views[0].id : 'settings'); };
     this.login(pickCode());
     document.addEventListener('visibilitychange', function () {
-      if (!document.hidden && CODE !== null && window.Sync) Sync.run(false);
+      if (CODE === null || !window.Sync) return;
+      if (document.hidden) Sync.flush();   // 앱을 나갈 때 미뤄 둔 변경을 올림
+      else Sync.run(false);
     });
     /* 오프라인 실행 (지원 안 하는 환경은 그냥 넘어감) */
     try {
