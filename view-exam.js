@@ -12,6 +12,9 @@ var ExamView = (function () {
       raw: '', pct: '', grade: '', w: {}, time: '', memo: '', rule: ''
     };
     var w = it.w || {};
+    var auto = autoOf(it.id), gw = {};
+    auto.forEach(function (p) { gw[p.genre] = p.wrong; });
+    function gRow(a) { return '<div class="f-row5">' + GENRES[a].map(function (g) { return fNum(g, 'g:' + g, gw[g], '0'); }).join('') + '</div>'; }
     var f = form(
       '<div class="f-row">' + fDate('시행일', 'date', it.date) + fText('시험명', 'name', it.name, '예: 9월 모평') + '</div>' +
       fSeg('출제', 'org', ORGS, it.org) +
@@ -19,6 +22,8 @@ var ExamView = (function () {
       '<div class="f-row">' + fNum('원점수', 'raw', it.raw, '/100') + fNum('백분위', 'pct', it.pct, '') + '</div>' +
       fSeg('등급', 'grade', ['1', '2', '3', '4', '5', '6', '7', '8', '9'], it.grade ? String(it.grade) : '') +
       '<div class="f-row3">' + fNum('독서 오답', 'w독서', w['독서'], '개') + fNum('문학 오답', 'w문학', w['문학'], '개') + fNum('선택 오답', 'w선택', w['선택'], '개') + '</div>' +
+      '<div class="f-cap">제재별 오답 <span>· 입력하면 제재별 기록에도 반영 · 독서·문학 오답이 비어 있으면 합계로 채움</span></div>' +
+      gRow('독서') + gRow('문학') +
       fNum('소요 시간', 'time', it.time, '분') +
       fArea('메모 · 총평', 'memo', it.memo, '시간 배분, 무너진 지점, 느낀 점', true) +
       fArea('행동강령 · 다음 시험에서 지킬 것', 'rule', it.rule, '예) 독서 첫 지문 8분 넘기면 표시하고 넘어간다\n예) 문학 <보기> 먼저 읽기', true)
@@ -42,15 +47,34 @@ var ExamView = (function () {
         var v = readForm(f);
         if (!v.date) { toast('시행일을 입력해 주세요'); return false; }
         Store.data.settings.lastSel = v.sel;
-        Store.put('exams', Object.assign({}, it, {
+        var sum = {};
+        AREAS.forEach(function (a) { GENRES[a].forEach(function (g) { var n = num(v['g:' + g]); if (n) sum[a] = (sum[a] || 0) + n; }); });
+        if (v['w독서'] === '' && sum['독서']) v['w독서'] = String(sum['독서']);
+        if (v['w문학'] === '' && sum['문학']) v['w문학'] = String(sum['문학']);
+        var ex = Object.assign({}, it, {
           date: v.date, org: v.org, name: v.name, sel: v.sel,
           raw: num(v.raw), pct: num(v.pct),
           grade: num(v.grade), time: num(v.time), memo: v.memo, rule: v.rule, m2r: 1,
           w: { '독서': num(v['w독서']), '문학': num(v['w문학']), '선택': num(v['w선택']) }
-        }));
+        });
+        Store.put('exams', ex);
+        syncGenres(ex, v);
         App.refresh();
       },
-      onDelete: item ? function () { Store.del('exams', it.id); App.refresh(); toast('삭제했습니다'); } : null
+      onDelete: item ? function () { autoOf(it.id).forEach(function (p) { Store.del('passages', p.id); }); Store.del('exams', it.id); App.refresh(); toast('삭제했습니다'); } : null
+    });
+  }
+
+  /* 모의고사에서 입력한 제재별 오답 → 제재별 기록(자동 항목) */
+  function autoOf(id) { return id ? Store.data.passages.filter(function (p) { return p.examId === id && p.auto; }) : []; }
+  function syncGenres(ex, v) {
+    var old = autoOf(ex.id);
+    ALL_GENRES.forEach(function (g) {
+      var n = num(v['g:' + g]), p = old.find(function (x) { return x.genre === g; });
+      if (n) Store.put('passages', Object.assign({ types: [], method: '', note: '', diff: null, qn: null }, p || {}, {
+        area: GENRE_AREA[g], genre: g, title: p && p.title || label(ex), source: label(ex), date: ex.date, examId: ex.id, wrong: n, auto: 1
+      }));
+      else if (p) Store.del('passages', p.id);
     });
   }
 
