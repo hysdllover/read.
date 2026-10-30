@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 25;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 26;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -188,6 +188,7 @@ function dateMarks(xs, minGap) {
 
 // ---------- 그림: 추이 (곡선 · 직선 · 막대 · 점) ----------
 function chartImg(vals, labels, o) {
+  if (o.W === CW) o.H = Math.round(o.H * VK);   // 위젯 높이에 맞춰 그래프 높이 조정
   const { W, H, P, F } = o;
   const dc = new DrawContext();
   dc.size = new Size(W, H); dc.opaque = false; dc.respectScreenScale = true;
@@ -261,6 +262,7 @@ function chartImg(vals, labels, o) {
 
 // ---------- 그림: 누적 막대 (영역별 오답) ----------
 function stackImg(rows, labels, colors, o) {
+  o.H = Math.round(o.H * VK);
   const { W, H, P, F } = o;
   const dc = new DrawContext();
   dc.size = new Size(W, H); dc.opaque = false; dc.respectScreenScale = true;
@@ -388,21 +390,28 @@ function header(w, title, right, ctx) {
   if (right) text(top, right, ctx.F.txt(9.5), ctx.P.accent);
   return top;
 }
-function image(st, img, W, H) { const i = st.addImage(img); i.imageSize = new Size(W, H); i.centerAlignImage(); return i; }
+function image(st, img, W, H) { if (W !== H) H = Math.round(H * VK); const i = st.addImage(img); i.imageSize = new Size(W, H); i.centerAlignImage(); return i; }
 /* 실제 위젯 크기(pt): 기기 화면 폭에 따라 다름 → 그래프·선이 위젯 폭을 정확히 채우도록 */
 const WSIZE = [
   [320, 141, 292, 311], [360, 155, 329, 345], [375, 155, 329, 345], [390, 158, 338, 354], [393, 158, 338, 354],
   [402, 162, 344, 366], [414, 169, 360, 379], [428, 170, 364, 382], [430, 170, 364, 382], [440, 170, 364, 382]
 ];
+const PAD_K = [0.2575, 0.447];   // 아이패드 위젯 폭 = 화면 긴 변 × 0.2575, 중간 위젯 높이 = 폭 × 0.447
 function widgetBox(fam) {
   let sw = 390;
   try { sw = Device.screenSize().width; } catch (e) { }
-  if (Device.isPad && Device.isPad()) sw = 390;   // 아이패드는 아이폰 기준 크기로
+  if (Device.isPad && Device.isPad()) {   // 아이패드: 화면 긴 변에 비례 (큰 위젯은 정사각형)
+    let lw = 1024;
+    try { const z = Device.screenSize(); lw = Math.max(z.width, z.height); } catch (e) { }
+    const L = Math.round(lw * PAD_K[0]), M = Math.round(L * PAD_K[1]);
+    return fam === 'small' ? [M, M] : fam === 'large' ? [L, L] : [L, M];
+  }
   let best = WSIZE[3];
   WSIZE.forEach((r) => { if (Math.abs(r[0] - sw) < Math.abs(best[0] - sw)) best = r; });
   return fam === 'small' ? [best[1], best[1]] : fam === 'large' ? [best[2], best[3]] : [best[2], best[1]];
 }
 let CW = 300;   // 위젯 안쪽 폭 (build에서 계산)
+let VK = 1;     // 그래프 높이 배율: 실제 위젯 높이 / 아이폰 기준 높이 (최대 1)
 const chartW = () => CW;
 const lastName = (e) => (e && (e.name || e.org)) || '';
 
@@ -883,6 +892,7 @@ async function build(param) {
   const pd = { tight: [9, 11], normal: [13, 15], wide: [18, 20] }[cfg.pad] || [13, 15];
   w.setPadding(pd[0], pd[1], pd[0] - 2, pd[1]);
   CW = Math.floor(widgetBox(fam)[0] - pd[1] * 2);
+  VK = Math.min(1, widgetBox(fam)[1] / (fam === 'large' ? 354 : 158));
   (KINDS[cfg.kind] || trend)(w, ctx);
   /* 안내: 스크립트가 예전 판이거나, Parameter 이름의 위젯을 못 찾았을 때 */
   const note = (s.widgetScriptVer || 0) > SCRIPT_VER ? '앱에서 스크립트를 다시 복사해 주세요'

@@ -7,10 +7,12 @@ var WidgetPreview = (function () {
   /* 위젯 크기: 이 앱을 보고 있는 기기(아이폰) 화면에 맞춤 — widget.js의 WSIZE와 같은 표 */
   var WSIZE = [[320, 141, 292, 311], [360, 155, 329, 345], [375, 155, 329, 345], [390, 158, 338, 354], [393, 158, 338, 354],
     [402, 162, 344, 366], [414, 169, 360, 379], [428, 170, 364, 382], [430, 170, 364, 382], [440, 170, 364, 382]];
-  var SW = Math.min(screen.width, screen.height);
-  if (SW >= 700 || SW < 300) SW = 390;   // 아이패드·데스크톱은 아이폰 기준
+  var SW = Math.min(screen.width, screen.height), LW = Math.max(screen.width, screen.height);
+  var PAD = SW >= 700 && SW <= 1100 && /iPad|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;   // 아이패드: widget.js의 PAD_K와 같은 비율
+  if (SW >= 700 || SW < 300) SW = 390;
   var BEST = WSIZE[3];
   WSIZE.forEach(function (r) { if (Math.abs(r[0] - SW) < Math.abs(BEST[0] - SW)) BEST = r; });
+  if (PAD) { var PL = Math.round(LW * 0.2575), PM = Math.round(PL * 0.447); BEST = [SW, PM, PL, PL]; }
   var SIZES = {
     small: [BEST[1], BEST[1]], medium: [BEST[2], BEST[1]], large: [BEST[2], BEST[3]],
     accessoryCircular: [72, 72], accessoryRectangular: [160, 72], accessoryInline: [240, 22]
@@ -174,7 +176,7 @@ var WidgetPreview = (function () {
       out: out,
       env: {
         LinearGradient: function () { this.colors = []; this.locations = []; },
-        Device: { screenSize: function () { return new Size(SW, 844); }, isPad: function () { return false; } },
+        Device: { screenSize: function () { return new Size(PAD ? LW : SW, 844); }, isPad: function () { return PAD; } },
         Font: Font, Color: Color, Size: Size, Rect: Rect, Point: Point, Path: Path, DrawContext: DrawContext,
         ListWidget: ListWidget, Request: Request,
         Keychain: { contains: function () { return true; }, get: function () { return 'preview'; }, set: function () { } },
@@ -304,7 +306,7 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
-  var SCRIPT_VER = 25;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
+  var SCRIPT_VER = 26;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();
