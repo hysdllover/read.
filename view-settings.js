@@ -140,9 +140,13 @@ var SettingsView = (function () {
       (Sync.on() ? '연결됨' : '꺼짐') + '</span></div></section>');
     var c4 = h('<div class="card"></div>');
     if (Sync.on()) {
-      c4.innerHTML = '<div class="t-s muted" style="margin-bottom:10px">' +
-        esc(cfg.user || 'GitHub') + ' · 마지막 동기화 <span data-sync-state>' + esc(timeAgo(cfg.last)) + '</span>' +
-        (Sync.state ? ' · ' + esc(Sync.state) : '') + '</div>';
+      c4.innerHTML = '<div class="sync-diag" data-sync-diag>' + Sync.diagHTML() + '</div>';
+      var bt = h('<div class="f-row" style="margin-bottom:8px"></div>');
+      var chk = h('<button type="button" class="btn">연결 점검</button>');
+      chk.onclick = function () { chk.disabled = true; chk.textContent = '점검 중…'; Sync.check().then(function () { chk.disabled = false; chk.textContent = '연결 점검'; Sync.paint(); }); };
+      var rg = h('<button type="button" class="btn">Gist 다시 찾기</button>');
+      rg.onclick = function () { Sync.regist().then(function () { Sync.paint(); }); };
+      bt.appendChild(chk); bt.appendChild(rg); c4.appendChild(bt);
       var now = h('<button type="button" class="btn full" style="margin-bottom:8px">지금 동기화</button>');
       now.onclick = function () { Sync.run(true); };
       var off = h('<button type="button" class="btn full warn">연동 끄기</button>');

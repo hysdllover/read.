@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v30';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v31';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -207,6 +207,12 @@ function dLeft(s) {
 function byDateDesc(a, b) { return (b.date || '').localeCompare(a.date || '') || (b.u || 0) - (a.u || 0); }
 function avg(arr) { return arr.length ? arr.reduce(function (s, v) { return s + v; }, 0) / arr.length : null; }
 function r1(n) { return n == null ? '–' : (Math.round(n * 10) / 10); }
+/* 날짜·시각 (같은 날이면 시각만) */
+function fmtTime(ts) {
+  if (!ts) return '–';
+  var d = new Date(ts), n = new Date(), hm = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  return d.toDateString() === n.toDateString() ? '오늘 ' + hm : (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hm;
+}
 function timeAgo(ts) {
   if (!ts) return '없음';
   var m = Math.round((Date.now() - ts) / 60000);
