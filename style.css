@@ -419,6 +419,7 @@ section{margin-bottom:22px;}
 .lgd{display:inline-flex;align-items:center;gap:4px;font-size:.625rem;color:var(--t3);}
 .lgd i{width:7px;height:7px;border-radius:2px;display:inline-block;}
 .avg-row{display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:.66rem;color:var(--t3);}
+.avg-row.g-tot{flex-wrap:wrap;gap:6px 12px;}
 .avg-row b{color:var(--t1);font-weight:var(--wb);font-variant-numeric:tabular-nums;}
 
 /* 목록 */

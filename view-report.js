@@ -130,8 +130,7 @@ var Report = (function () {
 
       AREAS.forEach(function (a) {
         if (!d.passages.some(function (p) { return p.area === a && p.wrong != null; })) return;
-        out += sec((a === '독서' ? '제재별' : '갈래별') + ' 오답 추이', '<div class="card rp-c">' + GenreView.trend(a, { size: 'lg' }) + '</div>',
-          legend(GENRES[a], GENRES[a].map(function (g) { return Store.color(g); })));
+        out += sec((a === '독서' ? '제재별' : '갈래별') + ' 오답 추이', '<div class="card rp-c">' + GenreView.trend(a, { size: 'lg' }) + '</div>');
       });
     }
 
