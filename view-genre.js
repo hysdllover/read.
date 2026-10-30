@@ -24,7 +24,6 @@ var GenreView = (function () {
       '<div class="f-row">' + fText('출처', 'source', it.source, '예: 9월 모평') + fDate('푼 날짜', 'date', it.date) + '</div>' +
       '<div class="f-row">' + fNum('문항 수', 'qn', it.qn, '개') + fNum('틀린 개수', 'wrong', it.wrong, '개') + '</div>' +
       fStars('체감 난이도', 'diff', it.diff) +
-      fChips('오답 원인', 'types', WRONG_TYPES, it.types) +
       fArea('오답 정리', 'method', it.method, '틀린 문항 번호, 근거 문장, 왜 틀렸는지', true) +
       fArea('풀이 방법론 정리', 'note', it.note, '읽는 순서, 표시 규칙, 다음에 적용할 방법', true)
     );
@@ -46,13 +45,33 @@ var GenreView = (function () {
         Store.put('passages', Object.assign({}, it, {
           area: v.area, genre: g, title: v.title || '(제목 없음)', source: v.source,
           date: v.date, qn: num(v.qn), wrong: num(v.wrong), diff: v.diff,
-          types: v.types, method: v.method, note: v.note
+          method: v.method, note: v.note
         }));
         area = v.area;
         App.refresh();
       },
       onDelete: item ? function () { Store.del('passages', it.id); App.refresh(); toast('삭제했습니다'); } : null
     });
+  }
+
+  /* 시험(또는 날짜)마다 제재별 오답 개수를 쌓은 막대 */
+  function trend(a, opt) {
+    opt = opt || {};
+    var G = GENRES[a], by = {}, keys = [];
+    Store.data.passages.forEach(function (p) {
+      if (p.area !== a || p.wrong == null || G.indexOf(p.genre) < 0) return;
+      var k = p.examId || ('d' + p.date);
+      if (!by[k]) { by[k] = { date: p.date || '', w: {} }; keys.push(k); }
+      by[k].w[p.genre] = (by[k].w[p.genre] || 0) + num(p.wrong, 0);
+      if (p.date > by[k].date) by[k].date = p.date;
+    });
+    var rows = keys.map(function (k) { return by[k]; }).sort(function (x, y) { return x.date.localeCompare(y.date); });
+    if (opt.last) rows = rows.slice(-opt.last);
+    var tot = G.map(function (g) { return rows.reduce(function (t, r) { return t + (r.w[g] || 0); }, 0); });
+    return stackChart(rows.map(function (r) { return G.map(function (g) { return r.w[g] || 0; }); }),
+      rows.map(function (r) { return (r.date || '').slice(5).replace('.', '/'); }),
+      G.map(function (g) { return Store.color(g); }), { size: opt.size || '' }) +
+      (rows.length ? '<div class="avg-row">' + G.map(function (g, i) { return '<span>' + esc(g) + ' <b>' + tot[i] + '</b></span>'; }).join('') + '</div>' : '');
   }
 
   function render(root) {
@@ -88,20 +107,13 @@ var GenreView = (function () {
     sec.appendChild(grid);
     A.appendChild(sec);
 
-    /* 오답 원인 분포 */
-    var cnt = {};
-    inArea.forEach(function (p) { (p.types || []).forEach(function (t) { cnt[t] = (cnt[t] || 0) + 1; }); });
-    var keys = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; }).slice(0, 5);
-    if (keys.length) {
-      var s2 = h('<section><div class="sec-h"><h2>오답 원인</h2></div></section>');
-      var b2 = h('<div class="card"></div>');
-      b2.innerHTML = keys.map(function (k) {
-        return barRow(k, cnt[k], cnt[keys[0]], 'var(--accent)', '회');
-      }).join('');
-      b2.querySelectorAll('.bar-row .lb').forEach(function (el) { el.style.fontSize = '10px'; });
-      s2.appendChild(b2);
-      A.appendChild(s2);
-    }
+    /* 제재별 오답 추이 */
+    var s2 = h('<section><div class="sec-h"><h2>' + (area === '독서' ? '제재별' : '갈래별') + ' 오답 추이</h2><span class="more">' +
+      legend(GENRES[area], GENRES[area].map(function (g) { return Store.color(g); })) + '</span></div></section>');
+    var b2 = h('<div class="card"></div>');
+    b2.innerHTML = trend(area, { last: 12 });
+    s2.appendChild(b2);
+    A.appendChild(s2);
 
     /* 목록 */
     var list = pick ? inArea.filter(function (p) { return p.genre === pick; }) : inArea;
@@ -122,7 +134,6 @@ var GenreView = (function () {
         '<div class="item-s num">' + esc(p.date || '') + (p.source ? ' · ' + esc(p.source) : '') +
         (p.wrong != null ? ' · 오답 ' + esc(p.wrong) + (p.qn ? '/' + esc(p.qn) : '') : '') +
         (p.diff ? ' · 난도 ' + esc(p.diff) : '') + '</div>' +
-        ((p.types && p.types.length) ? '<div class="item-s">' + esc(p.types.join(' · ')) + '</div>' : '') +
         (p.note || p.method ? '<div class="item-body clamp3">' + esc(p.note || p.method) + '</div>' : '') +
         '</button>');
       it.onclick = function () { editor(p); };
@@ -132,7 +143,7 @@ var GenreView = (function () {
     B.appendChild(s3);
   }
 
-  return { render: render, editor: editor };
+  return { render: render, editor: editor, trend: trend };
 })();
 
 App.register({

@@ -14,12 +14,6 @@ var HomeView = (function () {
     });
     return out.sort(function (a, b) { return b.rate - a.rate; }).slice(0, 3);
   }
-  function topCauses() {
-    var cnt = {};
-    Store.data.passages.forEach(function (p) { (p.types || []).forEach(function (t) { cnt[t] = (cnt[t] || 0) + 1; }); });
-    return Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; }).slice(0, 3).map(function (k) { return { k: k, n: cnt[k] }; });
-  }
-
   function render(root) {
     var s = Store.data.settings;
     var exams = Store.data.exams.slice().sort(byDateDesc);
@@ -76,17 +70,14 @@ var HomeView = (function () {
     }
 
     /* 약점 요약 */
-    var wg = weakGenres(), tc = topCauses();
-    if (wg.length || tc.length) {
+    var wg = weakGenres();
+    if (wg.length) {
       var ws = h('<section><div class="sec-h"><h2>약점 요약</h2><span class="more">지문 기록 기준</span></div></section>');
       var wc = h('<div class="card weak"></div>');
       wc.innerHTML =
-        (wg.length ? '<div class="weak-h">오답률 높은 제재</div>' + wg.map(function (x) {
+        '<div class="weak-h">오답률 높은 제재</div>' + wg.map(function (x) {
           return barRow(x.g, Math.round(x.rate * 100), 100, Store.color(x.g), '%');
-        }).join('') : '') +
-        (tc.length ? '<div class="weak-h">자주 나온 오답 원인</div>' + tc.map(function (x) {
-          return barRow(x.k, x.n, tc[0].n, 'var(--rose)', '회');
-        }).join('') : '');
+        }).join('');
       ws.appendChild(wc);
       B.appendChild(ws);
     }
