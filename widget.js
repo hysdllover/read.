@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 27;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 28;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -396,7 +396,7 @@ const WSIZE = [
   [320, 141, 292, 311], [360, 155, 329, 345], [375, 155, 329, 345], [390, 158, 338, 354], [393, 158, 338, 354],
   [402, 162, 344, 366], [414, 169, 360, 379], [428, 170, 364, 382], [430, 170, 364, 382], [440, 170, 364, 382]
 ];
-const PAD_K = [0.2575, 0.447];   // 아이패드 위젯 폭 = 화면 긴 변 × 0.2575, 중간 위젯 높이 = 폭 × 0.447
+const PAD_K = [0.2575, 0.447, 2.06];   // 아이패드 위젯 폭 = 화면 긴 변 × 0.2575, 중간 위젯 높이 = 폭 × 0.447
 function widgetBox(fam) {
   let sw = 390;
   try { sw = Device.screenSize().width; } catch (e) { }
@@ -404,11 +404,11 @@ function widgetBox(fam) {
     let lw = 1024;
     try { const z = Device.screenSize(); lw = Math.max(z.width, z.height); } catch (e) { }
     const L = Math.round(lw * PAD_K[0]), M = Math.round(L * PAD_K[1]);
-    return fam === 'small' ? [M, M] : fam === 'large' ? [L, L] : [L, M];
+    return fam === 'small' ? [M, M] : fam === 'large' ? [L, L] : fam === 'extraLarge' ? [Math.round(L * PAD_K[2]), L] : [L, M];
   }
   let best = WSIZE[3];
   WSIZE.forEach((r) => { if (Math.abs(r[0] - sw) < Math.abs(best[0] - sw)) best = r; });
-  return fam === 'small' ? [best[1], best[1]] : fam === 'large' ? [best[2], best[3]] : [best[2], best[1]];
+  return fam === 'small' ? [best[1], best[1]] : fam === 'large' ? [best[2], best[3]] : fam === 'extraLarge' ? [best[2] * 2 + 16, best[3]] : [best[2], best[1]];
 }
 let CW = 300;   // 위젯 안쪽 폭 (build에서 계산)
 let VK = 1;     // 그래프 높이 배율: 실제 위젯 높이 / 아이폰 기준 높이 (최대 1)
@@ -715,7 +715,7 @@ const BLOCKS = {
     const { P, F, s, fam } = ctx;
     const S = series(ctx, b.metric || 'grade', b.count == null ? (fam === 'small' ? 6 : 10) : b.count);
     if (!S.rows.length) { text(w, '기록이 없습니다', F.txt(9.5), P.sub); return; }
-    const H = pick3(b.h, fam === 'small' ? [34, 52, 80] : [40, 70, 120]);
+    const H = ctx.gH || pick3(b.h, fam === 'small' ? [34, 52, 80] : [40, 70, 120]);
     image(w, chartImg(S.vals, S.labels, {
       W: chartW(fam), H, P, F, target: b.target !== false ? S.M.target(s) : null, invert: S.M.invert, shape: b.shape || 'curve',
       values: b.labels !== false, dates: b.dates !== false && fam !== 'small'
@@ -776,7 +776,7 @@ const BLOCKS = {
     const cols = keys.map((k) => (s.colors || {})['영역:' + k] || AREA_DEF[k]);
     const rows = exams.slice(-(b.count || (fam === 'small' ? 5 : 10)));
     if (!rows.length) return;
-    const H = pick3(b.h, fam === 'small' ? [40, 60, 90] : [44, 74, 120]);
+    const H = ctx.gH || pick3(b.h, fam === 'small' ? [40, 60, 90] : [44, 74, 120]);
     image(w, stackImg(rows.map((e) => keys.map((k) => +((e.w || {})[k]) || 0)), rows.map((e) => shortDate(e.date)), cols, { W: chartW(fam), H, P, F, dates: b.dates !== false && fam !== 'small', values: b.labels !== false }), chartW(fam), H);
   },
   weak(w, ctx, b) {
@@ -814,13 +814,44 @@ const BLOCKS = {
   },
   gap(w, ctx, b) { if (b.flex) w.addSpacer(); else w.addSpacer(pick3(b.size, [4, 10, 20])); }
 };
-function custom(w, ctx) {
-  const list = ctx.cfg.blocks && ctx.cfg.blocks.length ? ctx.cfg.blocks : [{ t: 'title', text: '국어' }, { t: 'big', metric: 'pct' }, { t: 'chart', metric: 'grade' }];
-  const flex = list.some((b) => b.t === 'gap' && b.flex);
+const GRAPH = { chart: 1, wrong: 1, weak: 1 };
+function blockList(w, ctx, list) {
   list.forEach((b, i) => {
     if (i && b.t !== 'gap' && list[i - 1].t !== 'gap') w.addSpacer(ctx.fam === 'small' ? 4 : 6);
     (BLOCKS[b.t] || (() => {}))(w, ctx, b);
   });
+}
+/* 아주 큰 위젯(또는 '단 나누기' 블록): 왼쪽·오른쪽 두 단. 단마다 그래프 폭을 단 폭에 맞춤 */
+function columns(w, ctx, L, R, k) {
+  const trim = (a) => { a = a.slice(); while (a.length && a[0].t === 'line') a.shift(); while (a.length && a[a.length - 1].t === 'line') a.pop(); return a; };
+  const full = CW, gap = 14, wl = Math.floor((full - gap * 2 - 1) * k), wr = full - gap * 2 - 1 - wl;
+  const row = hz(w.addStack()); row.topAlignContent();
+  const A = vt(row.addStack()); A.size = new Size(wl, 0);
+  CW = wl; blockList(A, ctx, trim(L)); A.addSpacer();
+  row.addSpacer(gap);
+  const d = row.addStack(); d.layoutVertically(); d.addSpacer(); d.size = new Size(1, 0); d.backgroundColor = C(ctx.P.line);
+  row.addSpacer(gap);
+  const B = vt(row.addStack()); B.size = new Size(wr, 0);
+  /* 아주 큰 위젯: 오른쪽 단의 그래프가 높이를 나눠 채움 */
+  const RR = trim(R), ng = RR.filter((b) => b.t === 'chart' || b.t === 'wrong').length;
+  if (ctx.xl && ng && !RR.some((b) => b.t === 'weak')) {
+    const lines = RR.filter((b) => b.t === 'line').length;
+    ctx.gH = Math.floor((ctx.boxH - 26 - lines * 13 - (RR.length - 1) * 6) / ng / VK);
+  }
+  CW = wr; blockList(B, ctx, RR); B.addSpacer();
+  CW = full; ctx.gH = 0;
+}
+function custom(w, ctx) {
+  const list = ctx.cfg.blocks && ctx.cfg.blocks.length ? ctx.cfg.blocks : [{ t: 'title', text: '국어' }, { t: 'big', metric: 'pct' }, { t: 'chart', metric: 'grade' }];
+  const ci = list.findIndex((b) => b.t === 'col');
+  if (ci >= 0 && ctx.fam !== 'small') { columns(w, ctx, list.slice(0, ci), list.slice(ci + 1).filter((b) => b.t !== 'col'), 0.5); return; }
+  if (ctx.xl) {   // 자동: 숫자·글 블록은 왼쪽, 그래프 블록은 오른쪽
+    const L = list.filter((b) => !GRAPH[b.t] && b.t !== 'line' && b.t !== 'gap');
+    const R = list.filter((b) => GRAPH[b.t] || b.t === 'line' || b.t === 'gap');
+    if (L.length && R.some((b) => GRAPH[b.t])) { columns(w, ctx, L, R, 0.3); return; }
+  }
+  const flex = list.some((b) => b.t === 'gap' && b.flex);
+  blockList(w, ctx, list.filter((b) => b.t !== 'col'));
   if (!flex) w.addSpacer();
 }
 
@@ -860,7 +891,7 @@ function lock(w, ctx) {
 // ---------- 조립 ----------
 const KINDS = { trend, number, summary, goal, recent, wrong, weak, rule, custom };
 async function build(param) {
-  const fam = config.widgetFamily || 'medium';
+  const famRaw = config.widgetFamily || 'medium', fam = famRaw === 'extraLarge' ? 'large' : famRaw;   // 아주 큰 위젯은 큰 위젯 구성 + 넓은 폭
   const w = new ListWidget();
   w.url = APP_URL;
   w.refreshAfterDate = new Date(Date.now() + 60 * 60 * 1000);
@@ -876,7 +907,7 @@ async function build(param) {
   const s = data.settings || {};
   const cfg = getConfig(s, param);
   const exams = (data.exams || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  const ctx = { cfg, fam, s, exams, data, F: fonts(cfg) };
+  const ctx = { cfg, fam, xl: famRaw === 'extraLarge', s, exams, data, F: fonts(cfg) };
   if (fam.indexOf('accessory') === 0) { lock(w, ctx); return w; }
   ctx.P = palette(s.theme, cfg.style, cfg.design);
   w.backgroundColor = C(ctx.P.bg);
@@ -887,13 +918,14 @@ async function build(param) {
     w.backgroundGradient = g;
   }
   if (+cfg.texture || cfg.note || cfg.margin) {
-    const box = widgetBox(fam), grad = cfg.style === 'custom' && cfg.design && cfg.design.grad && cfg.design.bg2;
+    const box = widgetBox(famRaw), grad = cfg.style === 'custom' && cfg.design && cfg.design.grad && cfg.design.bg2;
     w.backgroundImage = paperImg(box[0], box[1], ctx.P.bg, grad ? cfg.design.bg2 : null, +cfg.texture || 0, cfg.note, cfg.margin, ctx.P);
   }
   const pd = { tight: [9, 11], normal: [13, 15], wide: [18, 20] }[cfg.pad] || [13, 15];
   w.setPadding(pd[0], pd[1], pd[0] - 2, pd[1]);
-  CW = Math.floor(widgetBox(fam)[0] - pd[1] * 2);
-  VK = Math.min(1, widgetBox(fam)[1] / (fam === 'large' ? 354 : 158));
+  CW = Math.floor(widgetBox(famRaw)[0] - pd[1] * 2);
+  ctx.boxH = widgetBox(famRaw)[1] - pd[0] * 2 + 2;
+  VK = Math.min(1, widgetBox(famRaw)[1] / (fam === 'large' ? 354 : 158));
   (KINDS[cfg.kind] || trend)(w, ctx);
   /* 안내: 스크립트가 예전 판이거나, Parameter 이름의 위젯을 못 찾았을 때 */
   const note = (s.widgetScriptVer || 0) > SCRIPT_VER ? '앱에서 스크립트를 다시 복사해 주세요'

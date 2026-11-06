@@ -15,6 +15,7 @@ var WidgetPreview = (function () {
   if (PAD) { var PL = Math.round(LW * 0.2575), PM = Math.round(PL * 0.447); BEST = [SW, PM, PL, PL]; }
   var SIZES = {
     small: [BEST[1], BEST[1]], medium: [BEST[2], BEST[1]], large: [BEST[2], BEST[3]],
+    extraLarge: [PAD ? Math.round(BEST[2] * 2.06) : BEST[2] * 2 + 16, BEST[3]],   // 아이패드 전용 (widget.js와 같은 비율)
     accessoryCircular: [72, 72], accessoryRectangular: [160, 72], accessoryInline: [240, 22]
   };
   var SYS = '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif';
@@ -230,7 +231,7 @@ var WidgetBuilder = (function () {
     textFont: 'sys', numFont: 'sys', weight: 'light', scale: 1, pad: 'normal',
     show: { title: true, value: true, delta: true, target: true, labels: true, dates: true, stats: true, exam: true }
   };
-  var SIZE_KEY = { '작게': 'small', '중간': 'medium', '크게': 'large', '잠금 원형': 'accessoryCircular', '잠금 사각': 'accessoryRectangular', '잠금 한 줄': 'accessoryInline' };
+  var SIZE_KEY = { '작게': 'small', '중간': 'medium', '크게': 'large', '아주 크게': 'extraLarge', '잠금 원형': 'accessoryCircular', '잠금 사각': 'accessoryRectangular', '잠금 한 줄': 'accessoryInline' };
   var sel = 0, size = '중간', scriptText = '', look = '기본';
 
   /* 구성요소 종류와 옵션 */
@@ -265,6 +266,7 @@ var WidgetBuilder = (function () {
     rule: { n: '행동강령', d: '최근 행동강령', f: ['size', 'lines', 'align'], tg: [], def: { lines: 4 } },
     note: { n: '문구', d: '내가 쓴 한마디', f: ['text', 'size', 'color', 'align'], tg: ['bold'], def: { text: '', color: 'hl' } },
     line: { n: '구분선', d: '가는 선', f: [], tg: [], def: {} },
+    col: { n: '단 나누기', d: '여기부터 오른쪽 단 (큰·아주 큰 위젯)', f: [], tg: [], def: {} },
     gap: { n: '여백', d: '띄우기 · 아래로 밀기', f: ['size'], tg: ['flex'], def: { size: 'm' } }
   };
   function blockSummary(b) {
@@ -306,7 +308,7 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
-  var SCRIPT_VER = 27;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
+  var SCRIPT_VER = 28;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();
