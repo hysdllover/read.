@@ -241,6 +241,7 @@ var WidgetBuilder = (function () {
     text: { type: 'text', l: '글', ph: '예: 오늘도 한 지문 더' },
     metric: { l: '지표', o: MET, def: 'pct' },
     size: { l: '크기', o: SML, def: 'm' },
+    gsize: { l: '간격', o: [['좁게', 's'], ['보통', 'm'], ['넓게', 'l'], ['아주 넓게', 'xl']], def: 'm' },
     h: { l: '높이', o: [['낮게', 's'], ['보통', 'm'], ['높게', 'l']], def: 'm' },
     shape: { l: '모양', o: [['곡선', 'curve'], ['직선', 'line'], ['막대', 'bar'], ['점', 'dot']], def: 'curve' },
     count: { l: '기록 수', o: [['5회', 5], ['8회', 8], ['10회', 10], ['15회', 15], ['20회', 20], ['전체', 0]], def: 10 },
@@ -267,7 +268,7 @@ var WidgetBuilder = (function () {
     note: { n: '문구', d: '내가 쓴 한마디', f: ['text', 'size', 'color', 'align'], tg: ['bold'], def: { text: '', color: 'hl' } },
     line: { n: '구분선', d: '가는 선', f: [], tg: [], def: {} },
     col: { n: '단 나누기', d: '여기부터 오른쪽 단 (큰·아주 큰 위젯)', f: [], tg: [], def: {} },
-    gap: { n: '여백', d: '띄우기 · 아래로 밀기', f: ['size'], tg: ['flex'], def: { size: 'm' } }
+    gap: { n: '여백', d: '띄우기 · 아래로 밀기', f: ['gsize'], tg: ['flex'], def: { gsize: 'm' } }
   };
   function blockSummary(b) {
     var p = [];
@@ -277,6 +278,7 @@ var WidgetBuilder = (function () {
     if (b.keys) p.push(b.keys.length + '개');
     if (b.n) p.push(b.n + '개');
     if (b.flex) p.push('채우기');
+    else if (b.t === 'gap') p.push(FIELD.gsize.o.find(function (x) { return x[1] === (b.gsize || b.size || 'm'); })[0]);
     return p.join(' · ');
   }
 
@@ -308,7 +310,7 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
-  var SCRIPT_VER = 28;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
+  var SCRIPT_VER = 29;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();
