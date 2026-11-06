@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 30;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 31;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -145,6 +145,8 @@ const BIGW = { thin: 'ul', light: 'li', regular: 're' };
 function appFonts(s) {
   const a = (s && s.appFont) || {}, aw = { '가늘게': 'th', '얇게': 'li', '보통': 're' }[a.weight] || 'li';
   const kind = a.kind || 'sans', pick = (w) => (!w || w === 're' ? aw : w);
+  /* 내가 올린 글꼴: 앱에서 받은 설치 파일(프로파일)로 iOS에 설치하면 PostScript 이름으로 사용 */
+  if (kind === 'file' && a.ps) return [(sz) => new Font(a.ps, sz), (sz) => new Font(a.ps, sz)];
   const SD = { ul: 'Thin', th: 'Thin', li: 'Light', re: 'Regular', me: 'Medium', se: 'SemiBold' };
   if (kind === 'serif') return [(sz) => new Font('AppleMyungjo', sz), (sz) => new Font('AppleMyungjo', sz)];
   if (kind === 'round') return [(sz, w) => sysFont('round', pick(w), sz), (sz, w) => sysFont('round', w === 'ul' ? 'th' : w, sz)];

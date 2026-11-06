@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v36';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v37';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -438,14 +438,64 @@ var App = {
       } catch (e) { res(null); }
     });
   },
+  /* 글꼴 파일(ttf·otf)의 PostScript 이름 읽기 — 위젯(Scriptable)은 설치된 글꼴을 이 이름으로 찾음 */
+  fontInfo: function (buf) {
+    try {
+      var v = new DataView(buf), tag = v.getUint32(0);
+      var sfnt = tag === 0x00010000 || tag === 0x4F54544F || tag === 0x74727565;   // TrueType · 'OTTO' · 'true'
+      if (!sfnt) return { sfnt: false };
+      var n = v.getUint16(4), name = null;
+      for (var i = 0; i < n; i++) { var o = 12 + i * 16; if (v.getUint32(o) === 0x6E616D65) name = v.getUint32(o + 8); }
+      if (name == null) return { sfnt: true };
+      var cnt = v.getUint16(name + 2), so = name + v.getUint16(name + 4), ps = null, fam = null;
+      for (var j = 0; j < cnt; j++) {
+        var r = name + 6 + j * 12, pid = v.getUint16(r), id = v.getUint16(r + 6), len = v.getUint16(r + 8), off = v.getUint16(r + 10);
+        if (id !== 6 && id !== 1) continue;
+        var str = '';
+        if (pid === 3 || pid === 0) for (var k = 0; k < len; k += 2) str += String.fromCharCode(v.getUint16(so + off + k));
+        else for (var m = 0; m < len; m++) str += String.fromCharCode(v.getUint8(so + off + m));
+        if (id === 6 && (!ps || pid === 3)) ps = str;
+        if (id === 1 && (!fam || pid === 3)) fam = str;
+      }
+      return { sfnt: true, ps: ps, family: fam };
+    } catch (e) { return null; }
+  },
+  /* 내 글꼴을 iOS에 설치하는 구성 프로파일(.mobileconfig) 만들기 → 설치하면 위젯에서도 그 글꼴 사용 */
+  fontProfile: function () {
+    var self = this;
+    return this.fontDB('get').then(function (rec) {
+      if (!rec) throw new Error('먼저 글꼴 파일을 올려 주세요');
+      return rec.blob.arrayBuffer().then(function (buf) {
+        var fi = self.fontInfo(buf);
+        if (!fi || !fi.sfnt) throw new Error('위젯용 설치는 ttf · otf 파일만 됩니다 (woff는 안 됨)');
+        if (!fi.ps) throw new Error('글꼴 이름을 읽을 수 없는 파일입니다');
+        return new Promise(function (res) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1]); }; fr.readAsDataURL(rec.blob); })
+          .then(function (b64) {
+            var u = function () { return 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, function () { return (Math.random() * 16 | 0).toString(16); }).toUpperCase(); };
+            var x = function (t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
+            var id = 'kor-dash.font.' + fi.ps.replace(/[^A-Za-z0-9.-]/g, '');
+            var xml = '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' +
+              '<plist version="1.0"><dict><key>PayloadContent</key><array><dict>' +
+              '<key>Font</key><data>' + b64 + '</data><key>Name</key><string>' + x(rec.name) + '</string>' +
+              '<key>PayloadIdentifier</key><string>' + id + '.f</string><key>PayloadType</key><string>com.apple.font</string>' +
+              '<key>PayloadUUID</key><string>' + u() + '</string><key>PayloadVersion</key><integer>1</integer></dict></array>' +
+              '<key>PayloadDisplayName</key><string>' + x((fi.family || fi.ps) + ' 글꼴 (국어 대시보드 위젯)') + '</string>' +
+              '<key>PayloadIdentifier</key><string>' + id + '</string><key>PayloadType</key><string>Configuration</string>' +
+              '<key>PayloadUUID</key><string>' + u() + '</string><key>PayloadVersion</key><integer>1</integer></dict></plist>';
+            return { file: new File([xml], (fi.ps || 'font') + '.mobileconfig', { type: 'application/x-apple-aspen-config' }), ps: fi.ps };
+          });
+      });
+    });
+  },
   loadMyFont: function () {
     if (this._myFont) return Promise.resolve(true);
     var self = this;
     return this.fontDB('get').then(function (rec) {
       if (!rec || !window.FontFace) return false;
       return rec.blob.arrayBuffer().then(function (buf) {
+        var fi = App.fontInfo(buf); self._myPS = fi && fi.ps; self._myFontFile = fi && fi.sfnt;
         var ff = new FontFace('MyFont', buf, { weight: '100 900' });
-        return ff.load().then(function (f) { document.fonts.add(f); self._myFont = true; return true; });
+        return ff.load().then(function (f) { document.fonts.add(f); self._myFont = true; if (self.font().family === '내 글꼴' && self._myPS) self.shareFont(); return true; });
       }).catch(function () { return false; });
     });
   },
@@ -484,8 +534,8 @@ var App = {
   shareFont: function (onlyMissing) {
     if (!Store.data || (onlyMissing && Store.data.settings.appFont && Store.data.settings.wfApp)) return;
     var f = this.font(), s = Store.data.settings, nm = f.family === '직접 입력' ? (f.custom || '') : f.family;
-    var kind = f.family === '시스템' ? 'sys' : /세리프|함렛|마루부리|명조|Serif|Batang|Myeongjo|Myungjo|Song/i.test(nm) ? 'serif' : /고운 돋움|Round|Dodum/i.test(nm) ? 'round' : 'sans';
-    var af = { family: nm, weight: f.weight, kind: kind }, ch = JSON.stringify(af) !== JSON.stringify(s.appFont || null);
+    var kind = f.family === '내 글꼴' && this._myPS ? 'file' : f.family === '시스템' ? 'sys' : /세리프|함렛|마루부리|명조|Serif|Batang|Myeongjo|Myungjo|Song/i.test(nm) ? 'serif' : /고운 돋움|Round|Dodum/i.test(nm) ? 'round' : 'sans';
+    var af = { family: nm, weight: f.weight, kind: kind, ps: kind === 'file' ? this._myPS : undefined }, ch = JSON.stringify(af) !== JSON.stringify(s.appFont || null);
     if (ch) s.appFont = af;
     if (!s.wfApp) {   // 1회: 기존 위젯도 앱 글꼴로
       (s.widgets || []).forEach(function (w) { w.textFont = 'app'; w.numFont = 'app'; });
