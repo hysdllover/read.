@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 29;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 30;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -17,7 +17,7 @@ const AREA_DEF = { '독서': '#5b6b85', '문학': '#8f8aae', '선택': '#b3a78a'
 // ---------- 위젯 구성 ----------
 const CFG_DEF = {
   kind: 'trend', metric: 'grade', count: 10, shape: 'curve', style: 'card', align: 'left',
-  textFont: 'sys', numFont: 'sys', weight: 'light', scale: 1, pad: 'normal',
+  textFont: 'app', numFont: 'app', weight: 'light', scale: 1, pad: 'normal',
   design: null,   // style 'custom'일 때 {bg, bg2, grad, text, accent, good, bad, hl}
   blocks: null,   // kind 'custom'일 때 구성요소 목록
   show: { title: true, value: true, delta: true, target: true, labels: true, dates: true, stats: true, exam: true }
@@ -140,8 +140,22 @@ const NUM_FONTS = {
   gill: (s, w) => new Font(strong(w) ? 'GillSans-SemiBold' : (w === 're' ? 'GillSans' : 'GillSans-Light'), s)
 };
 const BIGW = { thin: 'ul', light: 'li', regular: 're' };
-function fonts(cfg) {
-  const k = +cfg.scale || 1, tf = TEXT_FONTS[cfg.textFont] || TEXT_FONTS.sys, nf = NUM_FONTS[cfg.numFont] || NUM_FONTS.sys;
+/* '앱 글꼴': 앱에서 고른 글꼴·굵기를 따라감. 위젯은 웹 글꼴을 못 쓰므로 iOS 기본 글꼴 중 가장 가까운 것으로
+   (고딕 계열 → Apple SD 산돌고딕 Neo, 명조 계열 → Apple 명조, 둥근 글꼴 → 둥근 시스템) */
+function appFonts(s) {
+  const a = (s && s.appFont) || {}, aw = { '가늘게': 'th', '얇게': 'li', '보통': 're' }[a.weight] || 'li';
+  const kind = a.kind || 'sans', pick = (w) => (!w || w === 're' ? aw : w);
+  const SD = { ul: 'Thin', th: 'Thin', li: 'Light', re: 'Regular', me: 'Medium', se: 'SemiBold' };
+  if (kind === 'serif') return [(sz) => new Font('AppleMyungjo', sz), (sz) => new Font('AppleMyungjo', sz)];
+  if (kind === 'round') return [(sz, w) => sysFont('round', pick(w), sz), (sz, w) => sysFont('round', w === 'ul' ? 'th' : w, sz)];
+  if (kind === 'sys') return [(sz, w) => sysFont('sys', pick(w), sz), (sz, w) => sysFont('sys', w, sz)];
+  return [(sz, w) => new Font('AppleSDGothicNeo-' + SD[pick(w)], sz), (sz, w) => sysFont('sys', w, sz)];
+}
+function fonts(cfg, s) {
+  const AF = appFonts(s);
+  const k = +cfg.scale || 1;
+  const tf = cfg.textFont === 'app' ? AF[0] : TEXT_FONTS[cfg.textFont] || TEXT_FONTS.sys;
+  const nf = cfg.numFont === 'app' ? AF[1] : NUM_FONTS[cfg.numFont] || NUM_FONTS.sys;
   return {
     txt: (s, w) => tf(s * k, w || 're'),
     num: (s, w) => nf(s * k, w || BIGW[cfg.weight] || 'li'),
@@ -914,7 +928,7 @@ async function build(param) {
   const s = data.settings || {};
   const cfg = getConfig(s, param);
   const exams = (data.exams || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  const ctx = { cfg, fam, xl: famRaw === 'extraLarge', s, exams, data, F: fonts(cfg) };
+  const ctx = { cfg, fam, xl: famRaw === 'extraLarge', s, exams, data, F: fonts(cfg, s) };
   if (fam.indexOf('accessory') === 0) { lock(w, ctx); return w; }
   ctx.P = palette(s.theme, cfg.style, cfg.design);
   w.backgroundColor = C(ctx.P.bg);
