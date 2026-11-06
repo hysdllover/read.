@@ -22,7 +22,7 @@ var WidgetPreview = (function () {
   var WEIGHT = { ultraLight: 100, thin: 200, light: 300, regular: 400, medium: 500, semibold: 600, bold: 700 };
   var SD = '"Apple SD Gothic Neo",' + SYS, HV = '"Helvetica Neue",Helvetica,' + SYS, AV = '"Avenir Next",Avenir,' + SYS;
   var NAMED = {
-    'AppleSDGothicNeo-Thin': [200, SD], 'AppleSDGothicNeo-Light': [300, SD], 'AppleSDGothicNeo-Regular': [400, SD], 'AppleSDGothicNeo-Medium': [500, SD],
+    'AppleSDGothicNeo-Thin': [200, SD], 'AppleSDGothicNeo-Light': [300, SD], 'AppleSDGothicNeo-Regular': [400, SD], 'AppleSDGothicNeo-Medium': [500, SD], 'AppleSDGothicNeo-SemiBold': [600, SD],
     'AppleMyungjo': [400, '"AppleMyungjo","Nanum Myeongjo",serif'],
     'HelveticaNeue-UltraLight': [100, HV], 'HelveticaNeue-Thin': [200, HV], 'HelveticaNeue-Light': [300, HV], 'HelveticaNeue': [400, HV],
     'AvenirNext-UltraLight': [200, AV], 'AvenirNext-Regular': [400, AV], 'AvenirNext-Medium': [500, AV],
@@ -215,8 +215,8 @@ var WidgetBuilder = (function () {
     note: [['없음', ''], ['줄노트', 'lined'], ['모눈', 'grid'], ['점', 'dot']],
     margin: [['끔', false], ['켬', true]],
     align: [['왼쪽', 'left'], ['가운데', 'center']],
-    textFont: [['시스템', 'sys'], ['둥근', 'round'], ['얇은 고딕', 'sdlight'], ['가는 고딕', 'sdthin'], ['명조', 'myungjo'], ['모노', 'mono']],
-    numFont: [['시스템', 'sys'], ['둥근', 'round'], ['모노', 'mono'], ['헬베티카', 'helv'], ['아베니르', 'avenir'], ['디도', 'didot'], ['퓨추라', 'futura'], ['조지아', 'georgia'], ['옵티마', 'optima'], ['길 산스', 'gill']],
+    textFont: [['앱 글꼴', 'app'], ['시스템', 'sys'], ['둥근', 'round'], ['얇은 고딕', 'sdlight'], ['가는 고딕', 'sdthin'], ['명조', 'myungjo'], ['모노', 'mono']],
+    numFont: [['앱 글꼴', 'app'], ['시스템', 'sys'], ['둥근', 'round'], ['모노', 'mono'], ['헬베티카', 'helv'], ['아베니르', 'avenir'], ['디도', 'didot'], ['퓨추라', 'futura'], ['조지아', 'georgia'], ['옵티마', 'optima'], ['길 산스', 'gill']],
     weight: [['가늘게', 'thin'], ['얇게', 'light'], ['보통', 'regular']],
     scale: [['작게', 0.9], ['보통', 1], ['크게', 1.15]]
   };
@@ -228,7 +228,7 @@ var WidgetBuilder = (function () {
   ];
   var DEF = {
     kind: 'trend', metric: 'grade', count: 10, shape: 'curve', style: 'card', align: 'left',
-    textFont: 'sys', numFont: 'sys', weight: 'light', scale: 1, pad: 'normal',
+    textFont: 'app', numFont: 'app', weight: 'light', scale: 1, pad: 'normal',
     show: { title: true, value: true, delta: true, target: true, labels: true, dates: true, stats: true, exam: true }
   };
   var SIZE_KEY = { '작게': 'small', '중간': 'medium', '크게': 'large', '아주 크게': 'extraLarge', '잠금 원형': 'accessoryCircular', '잠금 사각': 'accessoryRectangular', '잠금 한 줄': 'accessoryInline' };
@@ -310,7 +310,7 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
-  var SCRIPT_VER = 29;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
+  var SCRIPT_VER = 30;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();
