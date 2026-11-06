@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 28;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 29;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -812,12 +812,12 @@ const BLOCKS = {
     /* 폭을 계산하지 않고 위젯 안쪽 폭을 그대로 채움 (기기마다 위젯 크기가 달라도 끝까지) */
     const l = hz(w.addStack()); l.addSpacer(); l.size = new Size(0, 1); l.backgroundColor = C(ctx.P.line);
   },
-  gap(w, ctx, b) { if (b.flex) w.addSpacer(); else w.addSpacer(pick3(b.size, [4, 10, 20])); }
+  gap(w, ctx, b) { if (b.flex) w.addSpacer(); else w.addSpacer({ s: 4, m: 10, l: 20, xl: 34 }[b.gsize || b.size] || 10); }
 };
 const GRAPH = { chart: 1, wrong: 1, weak: 1 };
 function blockList(w, ctx, list) {
   list.forEach((b, i) => {
-    if (i && b.t !== 'gap' && list[i - 1].t !== 'gap') w.addSpacer(ctx.fam === 'small' ? 4 : 6);
+    if (i && b.t !== 'gap' && list[i - 1].t !== 'gap') w.addSpacer(ctx.fam === 'small' ? 4 : ctx.xl ? 9 : 6);
     (BLOCKS[b.t] || (() => {}))(w, ctx, b);
   });
 }
@@ -846,8 +846,15 @@ function custom(w, ctx) {
   const ci = list.findIndex((b) => b.t === 'col');
   if (ci >= 0 && ctx.fam !== 'small') { columns(w, ctx, list.slice(0, ci), list.slice(ci + 1).filter((b) => b.t !== 'col'), 0.5); return; }
   if (ctx.xl) {   // 자동: 숫자·글 블록은 왼쪽, 그래프 블록은 오른쪽
-    const L = list.filter((b) => !GRAPH[b.t] && b.t !== 'line' && b.t !== 'gap');
-    const R = list.filter((b) => GRAPH[b.t] || b.t === 'line' || b.t === 'gap');
+    /* 여백 블록은 바로 뒤 블록이 놓이는 단으로 (끝이면 앞 블록의 단) */
+    const side = (b) => (GRAPH[b.t] || b.t === 'line' ? 'R' : 'L');
+    const L = [], R = [];
+    list.forEach((b, i) => {
+      let k = b.t === 'gap' ? null : side(b);
+      for (let j = i + 1; !k && j < list.length; j++) if (list[j].t !== 'gap') k = side(list[j]);
+      for (let j = i - 1; !k && j >= 0; j--) if (list[j].t !== 'gap') k = side(list[j]);
+      (k === 'R' ? R : L).push(b);
+    });
     if (L.length && R.some((b) => GRAPH[b.t])) { columns(w, ctx, L, R, 0.3); return; }
   }
   const flex = list.some((b) => b.t === 'gap' && b.flex);
