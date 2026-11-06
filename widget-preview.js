@@ -34,7 +34,7 @@ var WidgetPreview = (function () {
   };
 
   function mocks(data, family, param) {
-    function FontC(name, size) { var n = NAMED[name] || [400, SYS]; this.css = n[0] + ' ' + size + 'px ' + n[1]; this.size = size; }
+    function FontC(name, size) { var n = NAMED[name] || (window.App && App._myPS && name === App._myPS ? [400, '"MyFont",' + SYS] : [400, SYS]); this.css = n[0] + ' ' + size + 'px ' + n[1]; this.size = size; }
     var Font = new Proxy(FontC, {
       get: function (t, k) {
         if (typeof k !== 'string') return t[k];
@@ -310,7 +310,7 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
-  var SCRIPT_VER = 30;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
+  var SCRIPT_VER = 31;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();

@@ -288,6 +288,8 @@ var SettingsView = (function () {
       '<div class="mf-row"><input type="text" class="mf-in" data-fcustom placeholder="구글 폰트 이름 (예: Gowun Batang)" value="' + esc(ft.custom || '') + '">' +
       '<button type="button" class="btn" data-fapply>적용</button></div>' +
       '<div class="t-xs dim">파일은 이 기기에만 저장되고 인터넷 없이도 쓸 수 있습니다. 아이폰에 설치한 글꼴은 Safari 웹앱에서 쓸 수 없어 파일로 올려 주세요.</div>' +
+      '<div class="mf-row mf-wid" hidden><button type="button" class="btn" data-fprof>위젯에도 이 글꼴 쓰기 (설치 파일 받기)</button></div>' +
+      '<div class="t-xs dim mf-wid" hidden>위젯은 iOS에 설치된 글꼴만 쓸 수 있습니다. 받은 파일을 열고 설정 → 일반 → VPN 및 기기 관리(또는 \'다운로드된 프로파일\')에서 설치하세요. 위젯을 쓰는 기기마다 한 번씩 설치합니다. ttf · otf 파일만 됩니다.</div>' +
       '</div>' +
       '<div class="font-prev"><div class="fp-n num">D-48 · 백분위 96</div>' +
       '<div class="fp-t">첫 문단에서 화제와 글의 방향을 확정한다. 근거 문장은 반드시 지문에 표시한다.</div></div>'
@@ -319,6 +321,7 @@ var SettingsView = (function () {
       App.fontDB('get').then(function (rec) {
         mfName.textContent = rec ? rec.name : '';
         mfDel.hidden = !rec;
+        fsf.querySelectorAll('.mf-wid').forEach(function (x) { x.hidden = !rec; });
       });
     }
     showMine();
@@ -335,6 +338,20 @@ var SettingsView = (function () {
           App.font({ family: '내 글꼴' }); pickFam('내 글꼴'); showMine(); toast('내 글꼴을 적용했습니다');
         });
       });
+    };
+    fsf.querySelector('[data-fprof]').onclick = function () {
+      App.fontProfile().then(function (r) {
+        App._myPS = r.ps; App.shareFont();
+        /* 홈 화면 앱(단독 실행)에서는 다운로드가 막힐 수 있어 공유 시트로 '파일에 저장' */
+        if (navigator.standalone && navigator.canShare && navigator.canShare({ files: [r.file] })) {
+          navigator.share({ files: [r.file] }).then(function () { toast('파일 앱에서 받은 파일을 눌러 설치해 주세요'); }, function () { });
+          return;
+        }
+        var url = URL.createObjectURL(r.file), a = document.createElement('a');
+        a.href = url; a.download = r.file.name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+        toast('설치 파일을 받았습니다 · 설정 앱에서 설치해 주세요');
+      }, function (e) { toast(e.message); });
     };
     mfDel.onclick = function () {
       App.fontDB('del').then(function () {
