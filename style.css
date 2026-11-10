@@ -564,3 +564,25 @@ html.note-margin .rule-card{border-left:0 !important;}
 .sync-help{background:var(--surface-2);border-radius:10px;padding:10px 12px;margin-bottom:8px;line-height:1.6;}
 .sync-help b{color:var(--bad);font-weight:var(--wb,500);}
 .sync-help div{color:var(--t2);}
+
+/* 필기 느낌: 연필(.pencil) · 색연필(.pencil-2) — 글꼴과 색은 그대로 */
+html.pencil .chart .ln,html.pencil .chart .gd,html.pencil .chart .tg,html.pencil .chart .pt,html.pencil .chart .halo{filter:url(#fxPencil);}
+html.pencil .chart .ln{stroke-linecap:round;stroke-linejoin:round;stroke-width:1.6;}
+html.pencil .chart .gd{stroke:var(--line);}
+html.pencil .chart .ar{fill:url(#ptHatch);opacity:.55;}
+html.pencil .chart rect{filter:url(#fxCrayon);}
+html.pencil .bar-row .tr{background:transparent;border-bottom:1px solid var(--line);border-radius:0;height:6px;}
+html.pencil .bar-row .fl{border-radius:1px;filter:url(#fxCrayon);
+  background-image:repeating-linear-gradient(-55deg,rgba(255,255,255,.28) 0 1px,transparent 1px 3px);}
+html.pencil .card,html.pencil .stat,html.pencil .list{position:relative;border-color:transparent;}
+html.pencil .card::before,html.pencil .stat::before,html.pencil .list::before{content:"";position:absolute;inset:0;border:1px solid var(--line);
+  border-radius:inherit;filter:url(#fxRough);pointer-events:none;}
+html.pencil .sec-h h2{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--violet) 22%,transparent) 62% 88%,transparent 88%);
+  background-size:100% 100%;padding:0 2px;margin-left:-2px;}
+/* 색연필: 더 진한 결, 빗금 면 */
+html.pencil-2 .chart .ln{stroke-width:2.3;}
+html.pencil-2 .chart .ar{opacity:.85;}
+html.pencil-2 .bar-row .tr{height:8px;}
+html.pencil-2 .bar-row .fl{background-image:repeating-linear-gradient(-55deg,rgba(255,255,255,.45) 0 1.2px,transparent 1.2px 3.2px);}
+html.pencil-2 .sec-h h2{background:linear-gradient(transparent 55%,color-mix(in srgb,var(--violet) 32%,transparent) 55% 92%,transparent 92%);}
+@media print{html.pencil .card::before,html.pencil .stat::before,html.pencil .list::before{display:none;}}

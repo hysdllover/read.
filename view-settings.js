@@ -193,7 +193,7 @@ var SettingsView = (function () {
       var b = h('<button type="button" class="th-p"><i>' + ['accent', 'good', 'bad', 'hl'].map(function (k) {
         return '<b style="background:' + t[k] + '"></b>';
       }).join('') + '</i>' + esc(name) + '</button>');
-      b.onclick = function () { var y = window.scrollY; var ct = currentTheme(); saveTheme(Object.assign({}, presets[name], { paper: presets[name].paper != null ? presets[name].paper : (+ct.paper || 0), note: presets[name].note != null ? presets[name].note : (ct.note || ''), margin: presets[name].margin != null ? presets[name].margin : !!ct.margin })); App.refresh(); window.scrollTo(0, y); toast(name + ' 적용'); };
+      b.onclick = function () { var y = window.scrollY; var ct = currentTheme(); saveTheme(Object.assign({}, presets[name], { paper: presets[name].paper != null ? presets[name].paper : (+ct.paper || 0), note: presets[name].note != null ? presets[name].note : (ct.note || ''), margin: presets[name].margin != null ? presets[name].margin : !!ct.margin, pencil: +ct.pencil || 0 })); App.refresh(); window.scrollTo(0, y); toast(name + ' 적용'); };
       pw.appendChild(b);
     });
     c9.appendChild(pw);
@@ -223,6 +223,11 @@ var SettingsView = (function () {
     });
     nf.querySelector('[data-seg=margin]').addEventListener('pick', function (e) { cur.margin = e.detail === '켬'; saveTheme(cur); });
     c9.appendChild(nf);
+    var PEN = ['끔', '연필', '색연필'];
+    var pnf = form(fSeg('필기 느낌 (글꼴·색은 그대로)', 'pencil', PEN, PEN[+cur.pencil || 0]));
+    bindForm(pnf);
+    pnf.querySelector('[data-seg=pencil]').addEventListener('pick', function (e) { cur.pencil = PEN.indexOf(e.detail); saveTheme(cur); });
+    c9.appendChild(pnf);
     var th0 = h('<button type="button" class="btn full" style="margin-top:12px">기본 테마로</button>');
     th0.onclick = function () { var y = window.scrollY; delete Store.data.settings.theme; Store.touchSettings(); App.refresh(); window.scrollTo(0, y); };
     c9.appendChild(th0);
