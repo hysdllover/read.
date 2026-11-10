@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v37';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v38';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -312,6 +312,28 @@ function applyTheme(t) {
   var root = document.documentElement;
   ['lined', 'grid', 'dot'].forEach(function (k) { root.classList.toggle('note-' + k, t.note === k); });
   root.classList.toggle('note-margin', !!t.margin && !!t.note);
+  /* 필기 느낌: 1 연필 · 2 색연필 — 글꼴·색은 그대로, 선·면만 손으로 그린 질감 */
+  var pc = +t.pencil || 0;
+  root.classList.toggle('pencil', pc > 0); root.classList.toggle('pencil-2', pc === 2);
+  if (pc && !document.getElementById('pencilDefs')) {
+    var d = document.createElement('div');
+    d.innerHTML = '<svg id="pencilDefs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
+      /* 연필 선: 살짝 흔들리고 결이 있는 선 */
+      '<filter id="fxPencil" x="-5%" y="-20%" width="110%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="n"/>' +
+      '<feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G" result="d"/>' +
+      '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.1 1.35" result="m"/><feComposite in="d" in2="m" operator="in"/></filter>' +
+      /* 색연필 면: 거친 알갱이 */
+      '<filter id="fxCrayon" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="8" result="n"/>' +
+      '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.3" result="m"/>' +
+      '<feComposite in="SourceGraphic" in2="m" operator="in" result="g"/><feDisplacementMap in="g" in2="n" scale="1.4" xChannelSelector="R" yChannelSelector="G"/></filter>' +
+      /* 손으로 그은 테두리 */
+      '<filter id="fxRough" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency="0.03 0.05" numOctaves="2" seed="5" result="n"/>' +
+      '<feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/></filter>' +
+      /* 빗금(색연필로 칠한 면) */
+      '<pattern id="ptHatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><line x1="0" y1="0" x2="0" y2="5" style="stroke:var(--accent);stroke-width:1.3;stroke-opacity:.45"/></pattern>' +
+      '</defs></svg>';
+    document.body.appendChild(d.firstChild);
+  }
 }
 function paperTex(lv, dark, k) {
   var a = [0, 0.05, 0.09, 0.14][lv] * k, b = [0, 0.035, 0.06, 0.09][lv] * k;
