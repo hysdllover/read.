@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v41';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v42';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -321,6 +321,7 @@ function applyTheme(t) {
   /* 필기 느낌: 1 연필 · 2 색연필 — 글꼴·색은 그대로, 선·면만 손으로 그린 질감 */
   var pc = +t.pencil || 0;
   root.classList.toggle('pencil', pc > 0); root.classList.toggle('pencil-2', pc === 2);
+  if (!pc) root.classList.remove('pencil-img');
   if (pc && !document.getElementById('pencilDefs')) {
     var d = document.createElement('div');
     d.innerHTML = '<svg id="pencilDefs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
@@ -340,6 +341,40 @@ function applyTheme(t) {
       '</defs></svg>';
     document.body.appendChild(d.firstChild);
   }
+  if (pc) roughBorder(mixHex(t.card, t.text, dark ? 0.22 : 0.16));
+}
+/* ---- 필기 느낌을 가볍게: 모양은 그대로 ----
+   카드마다 걸던 잡음 필터(feTurbulence)는 화면 전환·스크롤 때마다 다시 계산돼 느림 → 한 번만 그림으로 */
+function svgToPng(svg, w, h) {
+  return new Promise(function (res) {
+    try {
+      var img = new Image();
+      img.onload = function () {
+        try { var c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h); res(c.toDataURL('image/png')); }
+        catch (e) { res(null); }
+      };
+      img.onerror = function () { res(null); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    } catch (e) { res(null); }
+  });
+}
+/* 카드 테두리: 손으로 그은 둥근 사각형을 한 번만 그려 border-image로 (필터 없이 같은 모양) */
+var ROUGH = {};
+function roughBorder(color) {
+  var root = document.documentElement;
+  if (ROUGH[color]) { root.style.setProperty('--rough', ROUGH[color]); root.classList.add('pencil-img'); return; }
+  if (color in ROUGH) return;   // 그리는 중
+  ROUGH[color] = null;
+  var S = 2, W = 240, P = 4;   // 2배 해상도, 가장자리 여유 2px
+  svgToPng('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + W + '"><filter id="r" x="-2%" y="-2%" width="104%" height="104%">' +
+    '<feTurbulence type="fractalNoise" baseFrequency="' + (0.03 / S) + ' ' + (0.05 / S) + '" numOctaves="2" seed="5" result="n"/>' +
+    '<feDisplacementMap in="SourceGraphic" in2="n" scale="' + (2.4 * S) + '" xChannelSelector="R" yChannelSelector="G"/></filter>' +
+    '<rect x="' + (P + 1) + '" y="' + (P + 1) + '" width="' + (W - 2 * P - 2) + '" height="' + (W - 2 * P - 2) + '" rx="' + (14 * S) + '" fill="none" stroke="' + color + '" stroke-width="' + S + '" filter="url(#r)"/></svg>', W, W)
+    .then(function (u) {
+      if (!u) return;
+      ROUGH[color] = 'url("' + u + '")';
+      root.style.setProperty('--rough', ROUGH[color]); root.classList.add('pencil-img');
+    });
 }
 /* 종이 질감 SVG(잡음 필터)를 한 번만 그림으로 바꿔 둠 — 스크롤·화면 전환 때 필터 계산을 반복하지 않게 */
 var PAPER_PNG = {};
