@@ -269,7 +269,6 @@ function lineChart(vals, labels, opt) {
     var path = smoothPath(P);
     s += '<path class="ar" d="' + path + 'L' + P[n - 1][0].toFixed(1) + ',' + base + 'L' + P[0][0].toFixed(1) + ',' + base + 'Z" fill="url(#' + id + ')"/>';
     s += '<path class="ln" d="' + path + '"/>';
-    if (document.documentElement.classList.contains('pencil')) s += '<path class="ln2" transform="translate(.6 .7)" d="' + path + '"/>';
   }
   vals.forEach(function (v, i) {
     var x = P[i][0], y = P[i][1], last = i === n - 1;
