@@ -51,9 +51,7 @@ input,select,textarea{-webkit-appearance:none;appearance:none;}
 /* ===== 상단바 ===== */
 #topbar{
   position:sticky;top:0;z-index:30;
-  background:var(--bar,rgba(246,246,247,.92));
-  backdrop-filter:saturate(160%) blur(12px);
-  -webkit-backdrop-filter:saturate(160%) blur(12px);
+  background:var(--bg);   /* 흐림 효과(blur)는 스크롤 때마다 다시 계산돼 끊김 → 불투명 배경 */
   border-bottom:1px solid var(--line);
   padding-top:env(safe-area-inset-top);
 }
@@ -216,9 +214,7 @@ section{margin-bottom:18px;}
 #tabbar{
   position:fixed;left:0;right:0;bottom:0;z-index:40;
   display:flex;justify-content:center;gap:0;
-  background:var(--tab,rgba(255,255,255,.94));
-  backdrop-filter:saturate(160%) blur(12px);
-  -webkit-backdrop-filter:saturate(160%) blur(12px);
+  background:var(--surface);
   border-top:1px solid var(--line);
   padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
@@ -535,19 +531,21 @@ html.paper .card,html.paper .stat,html.paper .list{box-shadow:0 0 0 1px var(--li
 
 /* 노트 무늬 (설정 → 테마 색상) — 글 쓰는 곳에 줄/모눈/점, 왼쪽 여백선
    줄노트는 글 상자 자체에 그려서 글줄마다 정확히 밑줄 */
-html.note-lined{--note-bg:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--lh,1.8em) - 1px),var(--rule) calc(var(--lh,1.8em) - 1px),var(--rule) var(--lh,1.8em));}
-html.note-grid{--note-bg:repeating-linear-gradient(to bottom,transparent 0,transparent 17px,var(--rule) 17px,var(--rule) 18px),repeating-linear-gradient(to right,transparent 0,transparent 17px,var(--rule) 17px,var(--rule) 18px);}
-html.note-dot{--note-bg:radial-gradient(circle,var(--rule) 0.9px,transparent 1.3px) 0 0/16px 16px;}
+/* 무늬는 작은 타일을 반복(background-size)해서 그림 — 긴 반복 그라데이션보다 훨씬 가벼움 */
+html.note-lined{--note-bg:linear-gradient(to bottom,transparent calc(100% - 1px),var(--rule) calc(100% - 1px));--note-size:100% var(--lh,1.8em);}
+html.note-grid{--note-bg:linear-gradient(to bottom,transparent 17px,var(--rule) 17px),linear-gradient(to right,transparent 17px,var(--rule) 17px);--note-size:18px 18px,18px 18px;}
+html.note-dot{--note-bg:radial-gradient(circle,var(--rule) 0.9px,transparent 1.3px);--note-size:16px 16px;}
 html.note-margin{--note-margin:linear-gradient(to right,transparent 30px,var(--margin-line) 30px,var(--margin-line) 31px,transparent 31px);}
 /* 바탕(여백선 + 모눈/점 + 종이) */
-html[class*=note-] .notes .card,html[class*=note-] .rule-card,html[class*=note-] .list,html[class*=note-] .f textarea{
+html.note-lined .notes .card,html.note-lined .rule-card,html.note-lined .list,html.note-grid .list,html.note-dot .list{
   background-image:var(--note-margin,linear-gradient(transparent,transparent)),var(--paper-card,none);}
 html.note-grid .notes .card,html.note-grid .rule-card,html.note-grid .f textarea,html.note-dot .notes .card,html.note-dot .rule-card,html.note-dot .f textarea{
-  background-image:var(--note-margin,linear-gradient(transparent,transparent)),var(--note-bg),var(--paper-card,none);background-attachment:local,local,scroll;}
+  background-image:var(--note-margin,linear-gradient(transparent,transparent)),var(--note-bg),var(--paper-card,none);background-size:auto,var(--note-size),auto;}
+html.note-grid .f textarea,html.note-dot .f textarea{background-attachment:local;}
 /* 줄노트: 본문 글 상자에 밑줄 */
-html.note-lined .notes .item-body,html.note-lined .rule-body{--lh:1.9em;line-height:1.9;background-image:var(--note-bg);background-attachment:local;}
+html.note-lined .notes .item-body,html.note-lined .rule-body{--lh:1.9em;line-height:1.9;background-image:var(--note-bg);background-size:var(--note-size);}
 html.note-lined .f textarea{--lh:1.7em;line-height:1.7;background-image:var(--note-margin,linear-gradient(transparent,transparent)),var(--note-bg),var(--paper-card,none);
-  background-position:0 0,0 10px,0 0;background-attachment:local,local,scroll;}
+  background-size:auto,var(--note-size),auto;background-position:0 0,0 10px,0 0;background-attachment:local;}
 html.note-margin .notes .card,html.note-margin .rule-card,html.note-margin .f textarea{padding-left:42px;}
 html.note-margin .rule-card{border-left:0 !important;}
 @media print{html[class*=note-] .card,html[class*=note-] .list,html[class*=note-] .item-body,html[class*=note-] .rule-body{background-image:none !important;}}
@@ -566,7 +564,9 @@ html.note-margin .rule-card{border-left:0 !important;}
 .sync-help div{color:var(--t2);}
 
 /* 필기 느낌: 연필(.pencil) · 색연필(.pencil-2) — 글꼴과 색은 그대로 */
-html.pencil .chart .ln,html.pencil .chart .gd{filter:url(#fxPencil);}
+/* 연필 결: 필터 대신 살짝 어긋난 두 번째 선 (iOS에서 필터는 스크롤마다 다시 그려 무거움) */
+html.pencil .chart .ln2{fill:none;stroke:var(--accent);stroke-width:.8;opacity:.4;stroke-linecap:round;stroke-dasharray:6 1.5 3 1;}
+html.pencil-2 .chart .ln2{stroke-width:1.3;opacity:.55;}
 html.pencil .chart .ln{stroke-linecap:round;stroke-linejoin:round;stroke-width:1.6;}
 html.pencil .chart .gd{stroke:var(--line);}
 html.pencil .chart .ar{fill:url(#ptHatch);opacity:.55;}
