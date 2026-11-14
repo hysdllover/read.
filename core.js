@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v39';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v40';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -324,17 +324,6 @@ function applyTheme(t) {
   if (pc && !document.getElementById('pencilDefs')) {
     var d = document.createElement('div');
     d.innerHTML = '<svg id="pencilDefs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
-      /* 연필 선: 살짝 흔들리고 결이 있는 선 */
-      '<filter id="fxPencil" x="-5%" y="-20%" width="110%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="n"/>' +
-      '<feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" xChannelSelector="R" yChannelSelector="G" result="d"/>' +
-      '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.1 1.35" result="m"/><feComposite in="d" in2="m" operator="in"/></filter>' +
-      /* 색연필 면: 거친 알갱이 */
-      '<filter id="fxCrayon" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="1.3" numOctaves="2" seed="8" result="n"/>' +
-      '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.3" result="m"/>' +
-      '<feComposite in="SourceGraphic" in2="m" operator="in" result="g"/><feDisplacementMap in="g" in2="n" scale="1.4" xChannelSelector="R" yChannelSelector="G"/></filter>' +
-      /* 손으로 그은 테두리 */
-      '<filter id="fxRough" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency="0.03 0.05" numOctaves="2" seed="5" result="n"/>' +
-      '<feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/></filter>' +
       /* 빗금(색연필로 칠한 면) */
       '<pattern id="ptHatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><line x1="0" y1="0" x2="0" y2="5" style="stroke:var(--accent);stroke-width:1.3;stroke-opacity:.45"/></pattern>' +
       '</defs></svg>';
@@ -380,7 +369,43 @@ var App = {
     var self = this;
     return this.views.find(function (v) { return v.id === self.route; }) || this.views[0];
   },
-  go: function (id) { this.route = id; this.refresh(); },
+  /* 탭 화면 저장: 기록·테마가 그대로면 다시 그리지 않고 바로 보여 줌 */
+  cache: {},
+  stamp: function () { return (Store.data && Store.data.t) + '|' + THEME_KEY + '|' + (Store.data && JSON.stringify(Store.data.settings).length); },
+  go: function (id) {
+    var c = this.cache[id];
+    if (c && c.stamp === this.stamp() && id !== 'settings') {
+      this.route = id; this._shown = id;
+      var old = document.getElementById('main'); old.replaceWith(c.el);
+      this.chrome(this.view()); window.scrollTo(0, 0);
+      if (window.scrollCharts) scrollCharts(c.el);
+      return;
+    }
+    this.route = id; this.refresh();
+  },
+  chrome: function (cur) {
+    document.getElementById('viewTitle').textContent = cur.title;
+    var add = document.getElementById('btnAdd');
+    add.hidden = !cur.add;
+    add.onclick = cur.add || null;
+    document.querySelectorAll('#tabbar button').forEach(function (b) { b.classList.toggle('on', b.dataset.id === cur.id); });
+    document.getElementById('btnSet').classList.toggle('on', cur.id === 'settings');
+  },
+  /* 쉬는 시간에 다른 탭을 미리 그려 둠 (첫 전환도 바로) */
+  prerender: function () {
+    var self = this, ids = this.views.map(function (v) { return v.id; }).filter(function (id) { return id !== 'settings'; });
+    var idle = window.requestIdleCallback || function (f) { return setTimeout(f, 200); };
+    (function next() {
+      var id = ids.shift(); if (!id) return;
+      idle(function () {
+        var c = self.cache[id], st = self.stamp();
+        if (id !== self.route && !(c && c.stamp === st)) {
+          try { var v = self.views.find(function (x) { return x.id === id; }), m = document.createElement('main'); m.id = 'main'; v.render(m); self.cache[id] = { el: m, stamp: st }; } catch (e) { }
+        }
+        next();
+      });
+    })();
+  },
   /* 렌더마다 컨테이너를 새로 만들어 이벤트 리스너 누적을 차단 */
   refresh: function () {
     if (CODE === null) return;
@@ -395,16 +420,11 @@ var App = {
     var main = document.createElement('main');
     main.id = 'main';
     old.replaceWith(main);
-    document.getElementById('viewTitle').textContent = cur.title;
-    var add = document.getElementById('btnAdd');
-    add.hidden = !cur.add;
-    add.onclick = cur.add || null;
+    this.chrome(cur);
     cur.render(main);
+    this.cache[cur.id] = { el: main, stamp: this.stamp() };
     if (window.scrollCharts) scrollCharts(main);
-    document.querySelectorAll('#tabbar button').forEach(function (b) {
-      b.classList.toggle('on', b.dataset.id === cur.id);
-    });
-    document.getElementById('btnSet').classList.toggle('on', cur.id === 'settings');
+    clearTimeout(this._pre); var self = this; this._pre = setTimeout(function () { self.prerender(); }, 600);
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { }
     window.scrollTo(0, same ? y : 0);
   },
