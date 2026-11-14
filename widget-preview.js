@@ -57,6 +57,7 @@ var WidgetPreview = (function () {
     Path.prototype.move = function (p) { this.ops.push(['moveTo', p.x, p.y]); };
     Path.prototype.addLine = function (p) { this.ops.push(['lineTo', p.x, p.y]); };
     Path.prototype.addCurve = function (p, a, b) { this.ops.push(['bezierCurveTo', a.x, a.y, b.x, b.y, p.x, p.y]); };
+    Path.prototype.closeSubpath = function () { this.ops.push(['closePath']); };
     Path.prototype.addRoundedRect = function (r, rx) {
       var x = r.x, y = r.y, w = r.w, h = r.h, k = Math.min(rx, w / 2, h / 2);
       this.ops.push(['moveTo', x + k, y], ['lineTo', x + w - k, y], ['quadraticCurveTo', x + w, y, x + w, y + k], ['lineTo', x + w, y + h - k],
@@ -143,6 +144,7 @@ var WidgetPreview = (function () {
       };
       Object.defineProperty(st, 'size', { set: function (s) { if (s.width) el.style.width = s.width + 'px'; if (s.height) el.style.height = s.height + 'px'; el.style.flex = '0 0 auto'; } });
       Object.defineProperty(st, 'backgroundColor', { set: function (c) { el.style.background = c.css; } });
+      Object.defineProperty(st, 'backgroundImage', { configurable: true, set: function (c) { el.style.background = 'url(' + c.toDataURL() + ') 0 0/100% 100% no-repeat'; } });
       Object.defineProperty(st, 'cornerRadius', { set: function (r) { el.style.borderRadius = r + 'px'; } });
       return st;
     }
@@ -310,7 +312,7 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
-  var SCRIPT_VER = 32;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
+  var SCRIPT_VER = 33;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();

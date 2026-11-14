@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 32;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 33;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -207,16 +207,18 @@ function dateMarks(xs, minGap) {
 let PEN = 0;   // 0 끔 · 1 연필 · 2 색연필 (build에서 앱 테마로 정함)
 let PSEED = 11;
 const prnd = () => { PSEED = (PSEED * 16807) % 2147483647; return PSEED / 2147483647; };
-/* 연필 선: 살짝 흔들리는 점선 여러 겹 */
+/* 연필 선 (앱의 연필 필터처럼): 살짝 흔들리고, 짧은 마디마다 진하기가 달라 결이 보임 */
 function penLine(dc, xs, ys, color, lw, alpha) {
-  const passes = PEN === 2 ? 3 : 2;
-  for (let k = 0; k < passes; k++) {
-    const j = PEN === 2 ? 0.7 : 0.5;
-    const p = new Path(); p.move(new Point(xs[0] + (prnd() - 0.5) * j, ys[0] + (prnd() - 0.5) * j));
-    for (let i = 1; i < xs.length; i++) p.addLine(new Point(xs[i] + (prnd() - 0.5) * j, ys[i] + (prnd() - 0.5) * j));
-    dc.setStrokeColor(C(color, (alpha || 1) * (k ? 0.45 : 0.8))); dc.setLineWidth(k ? lw * 0.6 : lw * (PEN === 2 ? 1.25 : 1));
-    dc.addPath(p); dc.strokePath();
+  const j = PEN === 2 ? 0.7 : 0.5, w = lw * (PEN === 2 ? 1.45 : 1.05), A = alpha || 1;
+  const px = xs.map((x) => x + (prnd() - 0.5) * j), py = ys.map((y) => y + (prnd() - 0.5) * j);
+  dc.setLineWidth(w);
+  for (let i = 0; i < px.length - 1; i++) {
+    const p = new Path(); p.move(new Point(px[i], py[i])); p.addLine(new Point(px[i + 1], py[i + 1]));
+    dc.setStrokeColor(C(color, A * (0.55 + prnd() * 0.4))); dc.addPath(p); dc.strokePath();
   }
+  /* 연필 가루: 선 둘레의 옅은 알갱이 */
+  dc.setFillColor(C(color, A * 0.22));
+  for (let i = 0; i < px.length; i += 2) dc.fillRect(new Rect(px[i] + (prnd() - 0.5) * w * 1.6, py[i] + (prnd() - 0.5) * w * 1.6, 0.5, 0.5));
 }
 /* 곡선을 촘촘한 점으로 */
 function sampleCurve(pts, shape) {
@@ -233,17 +235,24 @@ function sampleCurve(pts, shape) {
   xs.push(pts[pts.length - 1].x); ys.push(pts[pts.length - 1].y);
   return { xs, ys };
 }
-/* 그래프 아래 빗금 칠: 바닥에서 오른쪽 위로 그어 곡선에 닿으면 멈춤 (곡선 위로 삐져나오지 않게) */
+/* 그래프 아래 빗금 칠 — 앱과 같은 무늬: 세로에서 38° 기운 선(위가 왼쪽), 간격 5, 강조색.
+   선마다 바닥에서 위로 따라가며 곡선 아래(칠할 영역) 구간만 그음 */
 function penHatch(dc, xs, ys, base, color) {
-  dc.setStrokeColor(C(color, PEN === 2 ? 0.38 : 0.24)); dc.setLineWidth(PEN === 2 ? 1 : 0.8);
-  const x0 = xs[0], x1 = xs[xs.length - 1], k = 1 / 0.78;   // 기울기 (앱의 빗금 각도와 비슷하게)
+  const k = Math.tan(38 * Math.PI / 180), step = 5 / Math.cos(38 * Math.PI / 180);
+  const x0 = xs[0], x1 = xs[xs.length - 1], top = Math.min(...ys);
   const cy = (x) => { let i = 0; while (i < xs.length - 2 && xs[i + 1] < x) i++; const f = xs[i + 1] === xs[i] ? 0 : (x - xs[i]) / (xs[i + 1] - xs[i]); return ys[i] + (ys[i + 1] - ys[i]) * f; };
-  for (let bx = x0 - (base - Math.min(...ys)) / k; bx < x1; bx += 4.5) {
-    let x = Math.max(bx, x0), y = base - (x - bx) * k, sx = x, sy = y;
-    if (y < cy(x)) continue;
-    while (x < x1 && y >= cy(x)) { x += 0.5; y -= 0.5 * k; }
-    if (x - sx < 1) continue;
-    const p = new Path(); p.move(new Point(sx, sy)); p.addLine(new Point(x, Math.max(y, cy(x)))); dc.addPath(p); dc.strokePath();
+  dc.setStrokeColor(C(color, PEN === 2 ? 0.38 : 0.25)); dc.setLineWidth(1);
+  for (let bx = x0; bx < x1 + (base - top) * k; bx += step) {
+    let seg = null;
+    for (let t = 0; t <= base - top + 0.5; t += 0.5) {
+      const x = bx - t * k, y = base - t;
+      const inside = x >= x0 && x <= x1 && y >= cy(x);
+      if (inside && !seg) seg = [x, y];
+      if ((!inside || t + 0.5 > base - top + 0.5) && seg) {
+        const p = new Path(); p.move(new Point(seg[0], seg[1])); p.addLine(new Point(x + (inside ? 0 : 0.5 * k), inside ? y : y + 0.5)); dc.addPath(p); dc.strokePath();
+        seg = null;
+      }
+    }
   }
 }
 /* 색연필로 칠한 사각형: 칠 + 흰 사선 결 */
@@ -256,6 +265,19 @@ function penRect(dc, x, y, w, h, color, alpha) {
     if (x2 <= x1) continue;
     p.move(new Point(x1, y1)); p.addLine(new Point(x2, Math.max(y, y2))); dc.addPath(p); dc.strokePath();
   }
+}
+/* 형광펜 밑줄 (앱의 섹션 제목처럼) */
+let HL_IMG = null;
+function hlImg(P) {
+  if (HL_IMG) return HL_IMG;
+  const dc = new DrawContext(); dc.size = new Size(10, 20); dc.opaque = false; dc.respectScreenScale = true;
+  dc.setFillColor(C(P.hl, PEN === 2 ? 0.32 : 0.22)); dc.fillRect(new Rect(0, 20 * (PEN === 2 ? 0.55 : 0.62), 10, 20 * (PEN === 2 ? 0.37 : 0.26)));
+  return (HL_IMG = dc.getImage());
+}
+function penTitle(row, s, font, color, P) {
+  if (!PEN) return text(row, s, font, color);
+  const st = row.addStack(); hz(st); st.backgroundImage = hlImg(P); st.setPadding(0, 2, 0, 2);
+  return text(st, s, font, color);
 }
 /* 가로 막대 (약점 제재 등): 필기 느낌이면 색연필 칠 + 밑줄 트랙 */
 function barFill(track, BW, r, color, P) {
@@ -455,6 +477,21 @@ function paperImg(W, H, bg, bg2, lv, note, margin, P) {
     const p = new Path(); p.move(new Point(10, 0)); p.addLine(new Point(10, H));
     dc.setStrokeColor(C(mix(bg, P ? P.bad : '#b07a80', 0.6))); dc.setLineWidth(0.8); dc.addPath(p); dc.strokePath();
   }
+  /* 필기 느낌: 앱 카드처럼 손으로 그은 테두리 */
+  if (PEN && P) {
+    const r = 18, i = 3.5, pts = [];
+    const add = (x, y) => pts.push([x + Math.sin(pts.length * 0.37) * 0.6 + (rnd() - 0.5) * 0.5, y + Math.cos(pts.length * 0.29) * 0.6 + (rnd() - 0.5) * 0.5]);
+    for (let x = i + r; x <= W - i - r; x += 6) add(x, i);
+    for (let a = -90; a <= 0; a += 15) add(W - i - r + r * Math.cos(a * Math.PI / 180), i + r + r * Math.sin(a * Math.PI / 180));
+    for (let y = i + r; y <= H - i - r; y += 6) add(W - i, y);
+    for (let a = 0; a <= 90; a += 15) add(W - i - r + r * Math.cos(a * Math.PI / 180), H - i - r + r * Math.sin(a * Math.PI / 180));
+    for (let x = W - i - r; x >= i + r; x -= 6) add(x, H - i);
+    for (let a = 90; a <= 180; a += 15) add(i + r + r * Math.cos(a * Math.PI / 180), H - i - r + r * Math.sin(a * Math.PI / 180));
+    for (let y = H - i - r; y >= i + r; y -= 6) add(i, y);
+    for (let a = 180; a <= 270; a += 15) add(i + r + r * Math.cos(a * Math.PI / 180), i + r + r * Math.sin(a * Math.PI / 180));
+    const p = new Path(); p.move(new Point(pts[0][0], pts[0][1])); pts.forEach((q) => p.addLine(new Point(q[0], q[1]))); p.closeSubpath();
+    dc.setStrokeColor(C(P.line)); dc.setLineWidth(0.9); dc.addPath(p); dc.strokePath();
+  }
   return dc.getImage();
 }
 
@@ -487,7 +524,7 @@ function text(st, s, font, color, lines) {
 function header(w, title, right, ctx) {
   if (!ctx.cfg.show.title && !right) return null;
   const top = w.addStack(); hz(top); top.centerAlignContent();
-  if (ctx.cfg.show.title) text(top, title, ctx.F.txt(10), ctx.P.sub);
+  if (ctx.cfg.show.title) penTitle(top, title, ctx.F.txt(10), ctx.P.sub, ctx.P);
   top.addSpacer();
   if (right) text(top, right, ctx.F.txt(9.5), ctx.P.accent);
   return top;
@@ -789,7 +826,7 @@ const BLOCKS = {
   title(w, ctx, b) {
     const { P, F } = ctx;
     alignRow(w, b.align === 'center', (r) => {
-      text(r, b.text || '국어', F.txt(pick3(b.size, [10, 13, 17]), b.bold ? 'se' : 're'), b.color === 'accent' ? P.accent : b.color === 'text' ? P.text : P.sub, 1);
+      penTitle(r, b.text || '국어', F.txt(pick3(b.size, [10, 13, 17]), b.bold ? 'se' : 're'), b.color === 'accent' ? P.accent : b.color === 'text' ? P.text : P.sub, P);
     });
   },
   big(w, ctx, b) {
@@ -1030,7 +1067,8 @@ async function build(param) {
     PEN = +th.pencil || 0;
   } else PEN = 0;
   PSEED = 11;
-  if (+cfg.texture || cfg.note || cfg.margin) {
+  HL_IMG = null;
+  if (+cfg.texture || cfg.note || cfg.margin || PEN) {
     const box = widgetBox(famRaw), grad = cfg.style === 'custom' && cfg.design && cfg.design.grad && cfg.design.bg2;
     w.backgroundImage = paperImg(box[0], box[1], ctx.P.bg, grad ? cfg.design.bg2 : null, +cfg.texture || 0, cfg.note, cfg.margin, ctx.P);
   }
