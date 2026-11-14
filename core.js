@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v38';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v39';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -286,8 +286,13 @@ function currentTheme() {
   if (p) { t.bg = p.bg; t.card = p.card; t.text = p.text; }
   return t;
 }
+var THEME_KEY = '';
 function applyTheme(t) {
   t = t || currentTheme();
+  /* 같은 테마면 다시 칠하지 않음 (화면 전환마다 배경 질감을 새로 그리던 지연 제거) */
+  var key = JSON.stringify(t);
+  if (key === THEME_KEY) return;
+  THEME_KEY = key;
   var r = document.documentElement.style, dark = hexRgb(t.bg).reduce(function (a, v) { return a + v; }, 0) < 384;
   var set = function (k, v) { r.setProperty(k, v); };
   set('--accent', t.accent); set('--navy', t.accent);
@@ -305,6 +310,7 @@ function applyTheme(t) {
   var lv = +t.paper || 0;
   set('--paper', lv ? paperTex(lv, dark, 1) : 'none');
   set('--paper-card', lv ? paperTex(lv, dark, 0.6) : 'none');
+  if (lv) { paperPng('--paper', lv, dark, 1); paperPng('--paper-card', lv, dark, 0.6); }
   document.documentElement.classList.toggle('paper', !!lv);
   /* 노트 무늬: 줄 · 모눈 · 점, 왼쪽 여백선 */
   set('--rule', mixHex(t.card, mixHex(t.accent, t.text, 0.3), dark ? 0.26 : 0.19));
@@ -334,6 +340,24 @@ function applyTheme(t) {
       '</defs></svg>';
     document.body.appendChild(d.firstChild);
   }
+}
+/* 종이 질감 SVG(잡음 필터)를 한 번만 그림으로 바꿔 둠 — 스크롤·화면 전환 때 필터 계산을 반복하지 않게 */
+var PAPER_PNG = {};
+function paperPng(prop, lv, dark, k) {
+  var id = [lv, dark, k].join(':');
+  if (PAPER_PNG[id]) { document.documentElement.style.setProperty(prop, PAPER_PNG[id]); return; }
+  try {
+    var src = paperTex(lv, dark, k).slice(5, -2), img = new Image();
+    img.onload = function () {
+      try {
+        var c = document.createElement('canvas'); c.width = 220; c.height = 220;
+        var x = c.getContext('2d'); x.drawImage(img, 0, 0, 220, 220);
+        PAPER_PNG[id] = 'url("' + c.toDataURL('image/png') + '")';
+        if (THEME_KEY) document.documentElement.style.setProperty(prop, PAPER_PNG[id]);
+      } catch (e) { }
+    };
+    img.src = src;
+  } catch (e) { }
 }
 function paperTex(lv, dark, k) {
   var a = [0, 0.05, 0.09, 0.14][lv] * k, b = [0, 0.035, 0.06, 0.09][lv] * k;

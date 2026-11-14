@@ -310,5 +310,7 @@ function stackChart(rows, labels, colors, opt) {
 }
 /* 가로 스크롤 차트는 최신(오른쪽 끝)이 보이게 */
 function scrollCharts(root) {
-  (root || document).querySelectorAll('.chart-scroll').forEach(function (el) { el.scrollLeft = el.scrollWidth; });
+  /* 넘치는 차트만, 화면을 그린 뒤에 (렌더링 중 강제 레이아웃 계산을 피함) */
+  var els = [].slice.call((root || document).querySelectorAll('.chart-scroll')).filter(function (el) { return el.firstChild && el.firstChild.style && el.firstChild.style.minWidth; });
+  if (els.length) requestAnimationFrame(function () { els.forEach(function (el) { el.scrollLeft = el.scrollWidth; }); });
 }
