@@ -8,7 +8,7 @@
 
 const APP_URL = 'https://hysdllover.github.io/read./';
 const GIST_DESC = 'korean-dashboard-sync';
-const SCRIPT_VER = 31;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
+const SCRIPT_VER = 32;   // 앱의 위젯 기능과 맞는 스크립트 판 (앱이 더 높으면 다시 복사 안내)
 const TOKEN = '__KOR_DASH_TOKEN__';   // 앱에서 복사할 때 자동으로 채워짐
 const hasToken = () => !!TOKEN && TOKEN.indexOf('__KOR_DASH') !== 0;
 const DEF = { accent: '#5b6b85', good: '#7a8465', bad: '#a8868a', hl: '#8f8aae', bg: '#f5f5f7', card: '#ffffff', text: '#1f2023' };
@@ -16,7 +16,7 @@ const AREA_DEF = { '독서': '#5b6b85', '문학': '#8f8aae', '선택': '#b3a78a'
 
 // ---------- 위젯 구성 ----------
 const CFG_DEF = {
-  kind: 'trend', metric: 'grade', count: 10, shape: 'curve', style: 'card', align: 'left',
+  kind: 'trend', metric: 'grade', count: 10, shape: 'curve', style: 'app', align: 'left',
   textFont: 'app', numFont: 'app', weight: 'light', scale: 1, pad: 'normal',
   design: null,   // style 'custom'일 때 {bg, bg2, grad, text, accent, good, bad, hl}
   blocks: null,   // kind 'custom'일 때 구성요소 목록
@@ -98,6 +98,7 @@ function palette(theme, style, design) {
   } else if (style === 'dark') p = { bg: '#1c2029', text: '#e6e7ec', accent: mix(t.accent, '#ffffff', 0.35), good: mix(t.good, '#ffffff', 0.3), bad: mix(t.bad, '#ffffff', 0.25), hl: mix(t.hl, '#ffffff', 0.3) };
   else if (style === 'color') p = { bg: t.accent, text: '#ffffff', accent: '#ffffff', good: mix(t.good, '#ffffff', 0.65), bad: mix(t.bad, '#ffffff', 0.6), hl: '#ffffff' };
   else if (style === 'paper') p = { bg: '#eef1f5', text: '#252b34', accent: mix(t.accent, '#252b34', 0.15), good: t.good, bad: t.bad, hl: t.hl };
+  else if (style === 'app') p = { bg: t.card, text: t.text, accent: t.accent, good: t.good, bad: t.bad, hl: t.hl };   // 앱 테마 그대로
   else if (style === 'pastel') p = { bg: mix(t.accent, '#ffffff', 0.86), text: mix(t.accent, '#15171c', 0.75), accent: t.accent, good: t.good, bad: t.bad, hl: t.hl };
   else p = { bg: style === 'bg' ? t.bg : t.card, text: t.text, accent: t.accent, good: t.good, bad: t.bad, hl: t.hl };
   p.sub = mix(p.text, p.bg, 0.3);
@@ -202,6 +203,78 @@ function dateMarks(xs, minGap) {
   return keep;
 }
 
+// ---------- 필기 느낌 (앱 테마의 연필 · 색연필) ----------
+let PEN = 0;   // 0 끔 · 1 연필 · 2 색연필 (build에서 앱 테마로 정함)
+let PSEED = 11;
+const prnd = () => { PSEED = (PSEED * 16807) % 2147483647; return PSEED / 2147483647; };
+/* 연필 선: 살짝 흔들리는 점선 여러 겹 */
+function penLine(dc, xs, ys, color, lw, alpha) {
+  const passes = PEN === 2 ? 3 : 2;
+  for (let k = 0; k < passes; k++) {
+    const j = PEN === 2 ? 0.7 : 0.5;
+    const p = new Path(); p.move(new Point(xs[0] + (prnd() - 0.5) * j, ys[0] + (prnd() - 0.5) * j));
+    for (let i = 1; i < xs.length; i++) p.addLine(new Point(xs[i] + (prnd() - 0.5) * j, ys[i] + (prnd() - 0.5) * j));
+    dc.setStrokeColor(C(color, (alpha || 1) * (k ? 0.45 : 0.8))); dc.setLineWidth(k ? lw * 0.6 : lw * (PEN === 2 ? 1.25 : 1));
+    dc.addPath(p); dc.strokePath();
+  }
+}
+/* 곡선을 촘촘한 점으로 */
+function sampleCurve(pts, shape) {
+  const xs = [], ys = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1], dx = (b.x - a.x) / 2;
+    for (let t = 0; t < 1; t += 1 / 14) {
+      if (shape === 'line') { xs.push(a.x + (b.x - a.x) * t); ys.push(a.y + (b.y - a.y) * t); continue; }
+      const u = 1 - t, c1x = a.x + dx, c2x = b.x - dx;
+      xs.push(u * u * u * a.x + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * b.x);
+      ys.push(u * u * u * a.y + 3 * u * u * t * a.y + 3 * u * t * t * b.y + t * t * t * b.y);
+    }
+  }
+  xs.push(pts[pts.length - 1].x); ys.push(pts[pts.length - 1].y);
+  return { xs, ys };
+}
+/* 그래프 아래 빗금 칠: 바닥에서 오른쪽 위로 그어 곡선에 닿으면 멈춤 (곡선 위로 삐져나오지 않게) */
+function penHatch(dc, xs, ys, base, color) {
+  dc.setStrokeColor(C(color, PEN === 2 ? 0.38 : 0.24)); dc.setLineWidth(PEN === 2 ? 1 : 0.8);
+  const x0 = xs[0], x1 = xs[xs.length - 1], k = 1 / 0.78;   // 기울기 (앱의 빗금 각도와 비슷하게)
+  const cy = (x) => { let i = 0; while (i < xs.length - 2 && xs[i + 1] < x) i++; const f = xs[i + 1] === xs[i] ? 0 : (x - xs[i]) / (xs[i + 1] - xs[i]); return ys[i] + (ys[i + 1] - ys[i]) * f; };
+  for (let bx = x0 - (base - Math.min(...ys)) / k; bx < x1; bx += 4.5) {
+    let x = Math.max(bx, x0), y = base - (x - bx) * k, sx = x, sy = y;
+    if (y < cy(x)) continue;
+    while (x < x1 && y >= cy(x)) { x += 0.5; y -= 0.5 * k; }
+    if (x - sx < 1) continue;
+    const p = new Path(); p.move(new Point(sx, sy)); p.addLine(new Point(x, Math.max(y, cy(x)))); dc.addPath(p); dc.strokePath();
+  }
+}
+/* 색연필로 칠한 사각형: 칠 + 흰 사선 결 */
+function penRect(dc, x, y, w, h, color, alpha) {
+  dc.setFillColor(C(color, (alpha || 1) * (PEN === 2 ? 0.85 : 0.75))); dc.fillRect(new Rect(x, y, w, h));
+  dc.setStrokeColor(C('#ffffff', PEN === 2 ? 0.45 : 0.3)); dc.setLineWidth(0.8);
+  for (let s = -h; s < w; s += PEN === 2 ? 2.6 : 3.2) {
+    const ax = Math.max(x, x + s), ay = y + h - Math.max(0, -s) * 0, p = new Path();
+    const sx = x + s, x1 = Math.max(x, sx), y1 = y + h - (x1 - sx), x2 = Math.min(x + w, sx + h), y2 = y + h - (x2 - sx);
+    if (x2 <= x1) continue;
+    p.move(new Point(x1, y1)); p.addLine(new Point(x2, Math.max(y, y2))); dc.addPath(p); dc.strokePath();
+  }
+}
+/* 가로 막대 (약점 제재 등): 필기 느낌이면 색연필 칠 + 밑줄 트랙 */
+function barFill(track, BW, r, color, P) {
+  const hgt = PEN ? 6 : 4;
+  track.size = new Size(BW, hgt);
+  if (PEN) { const im = track.addImage(penBar(BW * r, hgt, color)); im.imageSize = new Size(Math.max(2, Math.round(BW * r)), hgt); }
+  else {
+    track.cornerRadius = 2; track.backgroundColor = C(P.track);
+    const fill = track.addStack(); fill.size = new Size(Math.max(3, BW * r), hgt); fill.cornerRadius = 2; fill.backgroundColor = C(color);
+  }
+  track.addSpacer();
+}
+/* 가로 막대 그림 (약점 제재 등) */
+function penBar(w, h, color) {
+  const dc = new DrawContext(); dc.size = new Size(Math.max(2, Math.round(w)), h); dc.opaque = false; dc.respectScreenScale = true;
+  penRect(dc, 0, 0, Math.max(2, Math.round(w)), h, color);
+  return dc.getImage();
+}
+
 // ---------- 그림: 추이 (곡선 · 직선 · 막대 · 점) ----------
 function chartImg(vals, labels, o) {
   if (o.W === CW) o.H = Math.round(o.H * VK);   // 위젯 높이에 맞춰 그래프 높이 조정
@@ -222,8 +295,11 @@ function chartImg(vals, labels, o) {
   const col = o.color || P.accent;
   let p;
   if (o.base !== false) {
-    dc.setStrokeColor(C(P.line)); dc.setLineWidth(0.6);
-    p = new Path(); p.move(new Point(0, H - B)); p.addLine(new Point(W, H - B)); dc.addPath(p); dc.strokePath();
+    if (PEN) penLine(dc, [0, W / 3, W * 2 / 3, W], [H - B, H - B, H - B, H - B], P.line, 0.8);
+    else {
+      dc.setStrokeColor(C(P.line)); dc.setLineWidth(0.6);
+      p = new Path(); p.move(new Point(0, H - B)); p.addLine(new Point(W, H - B)); dc.addPath(p); dc.strokePath();
+    }
   }
   if (o.target != null) {
     dc.setStrokeColor(C(P.good, 0.85)); dc.setLineWidth(0.8);
@@ -234,9 +310,14 @@ function chartImg(vals, labels, o) {
     pts.forEach((q, i) => {
       const hit = o.target != null && (o.invert ? vals[i] <= o.target : vals[i] >= o.target);
       const top = Math.min(q.y, H - B - 2), h = Math.max(2, H - B - top);
+      if (PEN) { penRect(dc, q.x - bw / 2, top, bw, h, hit ? P.good : col, i === n - 1 ? 1 : 0.75); return; }
       const path = new Path(); path.addRoundedRect(new Rect(q.x - bw / 2, top, bw, h), 2, 2);
       dc.setFillColor(C(hit ? P.good : col, i === n - 1 ? 1 : 0.7)); dc.addPath(path); dc.fillPath();
     });
+  } else if (n > 1 && shape !== 'dot' && PEN) {
+    const sc = sampleCurve(pts, shape);
+    if (o.base !== false) penHatch(dc, sc.xs, sc.ys, H - B, col);
+    penLine(dc, sc.xs, sc.ys, col, o.lw || 1.5);
   } else if (n > 1 && shape !== 'dot') {
     p = new Path(); p.move(pt(pts[0]));
     for (let i = 0; i < n - 1; i++) {
@@ -258,6 +339,7 @@ function chartImg(vals, labels, o) {
         dc.setFillColor(C(hit ? P.good : (last || shape === 'dot' ? col : P.dot)));
         dc.fillEllipse(new Rect(q.x - r, q.y - r, r * 2, r * 2));
         if (!hit && !last && shape !== 'dot') { dc.setStrokeColor(C(col)); dc.setLineWidth(1); dc.strokeEllipse(new Rect(q.x - r, q.y - r, r * 2, r * 2)); }
+        if (PEN) { dc.setStrokeColor(C(hit ? P.good : col, 0.5)); dc.setLineWidth(0.6); dc.strokeEllipse(new Rect(q.x - r + (prnd() - 0.5) * 0.8, q.y - r + (prnd() - 0.5) * 0.8, r * 2, r * 2)); }
       }
     }
     if (o.values !== false) {
@@ -287,8 +369,11 @@ function stackImg(rows, labels, colors, o) {
   const mx = Math.max(1, ...tot);
   const gap = n > 1 ? (W - L - R) / (n - 1) : W, bw = Math.min(12, gap * 0.5);
   const X = (i) => n === 1 ? W / 2 : L + i * gap;
-  dc.setStrokeColor(C(P.line)); dc.setLineWidth(0.6);
-  const p = new Path(); p.move(new Point(0, H - B)); p.addLine(new Point(W, H - B)); dc.addPath(p); dc.strokePath();
+  if (PEN) penLine(dc, [0, W / 3, W * 2 / 3, W], [H - B, H - B, H - B, H - B], P.line, 0.8);
+  else {
+    dc.setStrokeColor(C(P.line)); dc.setLineWidth(0.6);
+    const p = new Path(); p.move(new Point(0, H - B)); p.addLine(new Point(W, H - B)); dc.addPath(p); dc.strokePath();
+  }
   const marks = dateMarks(rows.map((r, i) => X(i)), 34);
   rows.forEach((r, i) => {
     let y = H - B;
@@ -296,6 +381,7 @@ function stackImg(rows, labels, colors, o) {
       if (!v) return;
       const h = v / mx * (H - B - T - 2);
       y -= h;
+      if (PEN) { penRect(dc, X(i) - bw / 2, y, bw, Math.max(h - 1, 1), colors[j]); return; }
       const path = new Path(); path.addRoundedRect(new Rect(X(i) - bw / 2, y, bw, Math.max(h - 1, 1)), 2, 2);
       dc.setFillColor(C(colors[j])); dc.addPath(path); dc.fillPath();
     });
@@ -666,10 +752,8 @@ function weak(w, ctx) {
     const r = w.addStack(); hz(r); r.centerAlignContent();
     const lb = r.addStack(); lb.size = new Size(fam === 'small' ? 40 : 56, 0); text(lb, x.g, F.txt(9.5), P.sub, 1);
     r.addSpacer(4);
-    const track = r.addStack(); track.size = new Size(BW, 4); track.cornerRadius = 2; track.backgroundColor = C(P.track); hz(track);
-    const fill = track.addStack(); fill.size = new Size(Math.max(3, BW * x.r), 4); fill.cornerRadius = 2;
-    fill.backgroundColor = C((s.colors || {})[x.g] || P.bad);
-    track.addSpacer();
+    const track = r.addStack(); hz(track);
+    barFill(track, BW, x.r, (s.colors || {})[x.g] || P.bad, P);
     r.addSpacer();
     text(r, Math.round(x.r * 100) + '%', F.num(10.5, 're'), P.text);
   });
@@ -806,9 +890,8 @@ const BLOCKS = {
       const r = w.addStack(); hz(r); r.centerAlignContent();
       const lb = r.addStack(); lb.size = new Size(fam === 'small' ? 40 : 56, 0); text(lb, x.g, F.txt(9.5), P.sub, 1);
       r.addSpacer(4);
-      const track = r.addStack(); track.size = new Size(BW, 4); track.cornerRadius = 2; track.backgroundColor = C(P.track); hz(track);
-      const fill = track.addStack(); fill.size = new Size(Math.max(3, BW * x.r), 4); fill.cornerRadius = 2; fill.backgroundColor = C((s.colors || {})[x.g] || P.bad);
-      track.addSpacer();
+      const track = r.addStack(); hz(track);
+      barFill(track, BW, x.r, (s.colors || {})[x.g] || P.bad, P);
       r.addSpacer();
       text(r, Math.round(x.r * 100) + '%', F.num(10.5, 're'), P.text);
     });
@@ -940,6 +1023,13 @@ async function build(param) {
     g.locations = [0, 1];
     w.backgroundGradient = g;
   }
+  /* 앱 테마: 색·종이 질감·노트 무늬·여백선·필기 느낌을 앱과 같게 */
+  if (cfg.style === 'app') {
+    const th = s.theme || {};
+    cfg.texture = +th.paper || 0; cfg.note = th.note || ''; cfg.margin = !!th.margin && !!th.note;
+    PEN = +th.pencil || 0;
+  } else PEN = 0;
+  PSEED = 11;
   if (+cfg.texture || cfg.note || cfg.margin) {
     const box = widgetBox(famRaw), grad = cfg.style === 'custom' && cfg.design && cfg.design.grad && cfg.design.bg2;
     w.backgroundImage = paperImg(box[0], box[1], ctx.P.bg, grad ? cfg.design.bg2 : null, +cfg.texture || 0, cfg.note, cfg.margin, ctx.P);

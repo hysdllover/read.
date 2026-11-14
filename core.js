@@ -5,7 +5,7 @@
 
 var APP_KEY = 'kor-dash';
 var SCHEMA = 2;
-var APP_VER = 'kor-v42';   // sw.js의 CACHE와 같게
+var APP_VER = 'kor-v43';   // sw.js의 CACHE와 같게
 var CODE = null;
 
 /* 저장 공간 (사파리 비공개 모드·미리보기에서도 죽지 않도록 감쌈) */
@@ -644,7 +644,7 @@ var App = {
   },
   /* 위젯이 앱 글꼴을 따라가도록 글꼴 종류·굵기를 기록에 저장 (기기 연동으로 위젯에 전달) */
   shareFont: function (onlyMissing) {
-    if (!Store.data || (onlyMissing && Store.data.settings.appFont && Store.data.settings.wfApp)) return;
+    if (!Store.data || (onlyMissing && Store.data.settings.appFont && Store.data.settings.wfApp && Store.data.settings.wtApp)) return;
     var f = this.font(), s = Store.data.settings, nm = f.family === '직접 입력' ? (f.custom || '') : f.family;
     var kind = f.family === '내 글꼴' && this._myPS ? 'file' : f.family === '시스템' ? 'sys' : /세리프|함렛|마루부리|명조|Serif|Batang|Myeongjo|Myungjo|Song/i.test(nm) ? 'serif' : /고운 돋움|Round|Dodum/i.test(nm) ? 'round' : 'sans';
     var af = { family: nm, weight: f.weight, kind: kind, ps: kind === 'file' ? this._myPS : undefined }, ch = JSON.stringify(af) !== JSON.stringify(s.appFont || null);
@@ -652,6 +652,10 @@ var App = {
     if (!s.wfApp) {   // 1회: 기존 위젯도 앱 글꼴로
       (s.widgets || []).forEach(function (w) { w.textFont = 'app'; w.numFont = 'app'; });
       s.wfApp = 1; ch = true;
+    }
+    if (!s.wtApp) {   // 1회: 기존 위젯도 앱 테마로 (색·종이·노트·필기 느낌)
+      (s.widgets || []).forEach(function (w) { w.style = 'app'; });
+      s.wtApp = 1; ch = true;
     }
     if (ch) Store.touchSettings();
   },

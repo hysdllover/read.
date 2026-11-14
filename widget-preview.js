@@ -209,7 +209,7 @@ var WidgetBuilder = (function () {
     metric: [['등급', 'grade'], ['백분위', 'pct'], ['원점수', 'raw'], ['오답 합계', 'wrong'], ['독서 오답', 'w독서'], ['문학 오답', 'w문학'], ['선택 오답', 'w선택']],
     count: [['5회', 5], ['8회', 8], ['10회', 10], ['15회', 15], ['20회', 20], ['전체', 0]],
     shape: [['곡선', 'curve'], ['직선', 'line'], ['막대', 'bar'], ['점', 'dot']],
-    style: [['기본', 'card'], ['배경', 'bg'], ['다크', 'dark'], ['컬러', 'color'], ['종이', 'paper'], ['파스텔', 'pastel'], ['직접', 'custom']],
+    style: [['앱 테마', 'app'], ['기본', 'card'], ['배경', 'bg'], ['다크', 'dark'], ['컬러', 'color'], ['종이', 'paper'], ['파스텔', 'pastel'], ['직접', 'custom']],
     pad: [['좁게', 'tight'], ['보통', 'normal'], ['넓게', 'wide']],
     texture: [['끔', 0], ['약하게', 1], ['보통', 2], ['진하게', 3]],
     note: [['없음', ''], ['줄노트', 'lined'], ['모눈', 'grid'], ['점', 'dot']],
@@ -227,7 +227,7 @@ var WidgetBuilder = (function () {
     ['textFont', '한글 글꼴', 'all'], ['numFont', '숫자 글꼴', 'all'], ['weight', '숫자 굵기', 'all'], ['scale', '글자 크기', 'all']
   ];
   var DEF = {
-    kind: 'trend', metric: 'grade', count: 10, shape: 'curve', style: 'card', align: 'left',
+    kind: 'trend', metric: 'grade', count: 10, shape: 'curve', style: 'app', align: 'left',
     textFont: 'app', numFont: 'app', weight: 'light', scale: 1, pad: 'normal',
     show: { title: true, value: true, delta: true, target: true, labels: true, dates: true, stats: true, exam: true }
   };
@@ -310,7 +310,7 @@ var WidgetBuilder = (function () {
     openSheet({ title: '길게 눌러 전체 선택 → 복사', body: ta, okLabel: '닫기' });
   }
 
-  var SCRIPT_VER = 31;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
+  var SCRIPT_VER = 32;   // widget.js의 SCRIPT_VER와 같게 (올리면 예전 위젯에 '다시 복사' 안내)
   function mount(box) {
     box.innerHTML = '';
     var ws = list();
